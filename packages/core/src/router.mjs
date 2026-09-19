@@ -5,6 +5,11 @@ import { scanDirs } from './indexer/scanner.mjs';
 import { buildLexicalIndex, lexicalSearch } from './search/lexical.mjs';
 import { buildSemanticIndex, semanticSearch } from './search/semantic.mjs';
 import { hybridRank } from './search/hybrid.mjs';
+import { stripStopwords } from './search/stopwords.mjs';
+
+const SCORE_SCALE = 1000;
+const PREREQ_PENALTY = 30;
+const NEVER_INVOKE_PENALTY = 50;
 
 export async function loadSkills(projectDir = process.cwd()) {
   const dirs = [
@@ -22,8 +27,9 @@ export async function route(query, opts = {}) {
   const skills = await loadSkills(projectDir);
   if (skills.length === 0) return { query, total_skills: 0, candidates: [], mode: 'lexical' };
 
+  const cleanedQuery = stripStopwords(query) || query;
   const lexicalIndex = buildLexicalIndex(skills);
-  const lexResults = lexicalSearch(lexicalIndex, query, limit * 3);
+  const lexResults = lexicalSearch(lexicalIndex, cleanedQuery, limit * 3);
   const lexRanked = lexResults.map((r) => ({
     name: skills[r.id].name,
     score: r.score,
@@ -44,7 +50,7 @@ export async function route(query, opts = {}) {
 
   const fused = mode === 'hybrid'
     ? hybridRank(lexRanked, semRanked)
-    : lexRanked.map((r) => ({ name: r.name, score: r.score }));
+    : lexRanked.map((r) => ({ name: r.name, score: r.score * SCORE_SCALE }));
 
   const byName = new Map(skills.map((s) => [s.name, s]));
   const lexByName = new Map(lexRanked.map((r) => [r.name, r.score]));
@@ -55,19 +61,29 @@ export async function route(query, opts = {}) {
     const skill = byName.get(f.name);
     const prereqs = checkPrereqs(skill, projectDir);
     const penalties = [];
-    let score = f.score;
 
-    if (!prereqs.met) { score -= 0.3; penalties.push({ reason: 'prerequisites missing', value: -0.3 }); }
-    if (skill.never_auto_invoke) { score -= 0.5; penalties.push({ reason: 'never_auto_invoke', value: -0.5 }); }
+    // RRF даёт крохотные числа (~0.016–0.033). Умножаем на 1000 → 16–33.
+    // Для lexical-only режима score уже в нормальном диапазоне (см. выше).
+    const baseScore = mode === 'hybrid' ? f.score * SCORE_SCALE : f.score;
+    let score = baseScore;
+
+    if (!prereqs.met) {
+      score -= PREREQ_PENALTY;
+      penalties.push({ reason: 'prerequisites missing', value: -PREREQ_PENALTY });
+    }
+    if (skill.never_auto_invoke) {
+      score -= NEVER_INVOKE_PENALTY;
+      penalties.push({ reason: 'never_auto_invoke', value: -NEVER_INVOKE_PENALTY });
+    }
 
     return {
       name: skill.name,
-      score,
+      score: round(score, 1),
       reason: mode === 'hybrid' ? 'hybrid (lexical + semantic)' : 'lexical match',
       breakdown: {
-        base: f.score,
-        lexical: lexByName.get(f.name) || 0,
-        semantic: semByName.get(f.name) || 0,
+        base: round(baseScore, 1),
+        lexical: round(lexByName.get(f.name) || 0, 1),
+        semantic: round(semByName.get(f.name) || 0, 3),
         matched_terms: lexTermsByName.get(f.name) || [],
         penalties
       },
@@ -85,6 +101,7 @@ export async function route(query, opts = {}) {
 
   return {
     query,
+    cleaned_query: cleanedQuery !== query ? cleanedQuery : undefined,
     total_skills: skills.length,
     mode,
     candidates: candidates.slice(0, limit)
@@ -96,4 +113,9 @@ function checkPrereqs(skill, projectDir) {
   if (files.length === 0) return { met: true, missing: [] };
   const missing = files.filter((f) => !existsSync(join(projectDir, f)));
   return { met: missing.length === 0, missing };
+}
+
+function round(x, digits) {
+  const f = Math.pow(10, digits);
+  return Math.round(x * f) / f;
 }

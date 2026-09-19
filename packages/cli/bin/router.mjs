@@ -19,40 +19,51 @@ program
   .option('--explain', 'show score breakdown')
   .option('--no-semantic', 'disable semantic search (lexical only)')
   .action(async (query, opts) => {
-    const result = await route(query, { limit: parseInt(opts.limit, 10), semantic: opts.semantic });
+    const result = await route(query, {
+      limit: parseInt(opts.limit, 10),
+      semantic: opts.semantic
+    });
 
     if (opts.json) { console.log(JSON.stringify(result, null, 2)); return; }
 
     console.log('');
     console.log('Query: ' + query);
+    if (result.cleaned_query) console.log('After stopword filter: "' + result.cleaned_query + '"');
     console.log('Total skills: ' + result.total_skills + ' | mode: ' + (result.mode || 'lexical'));
     console.log('');
 
-    if (result.candidates.length === 0) { console.log('  No matches.'); console.log(''); return; }
+    if (result.candidates.length === 0) {
+      console.log('  No matches.');
+      console.log('');
+      return;
+    }
 
+    const top = result.candidates[0].score || 1;
     for (const c of result.candidates) {
-      console.log('  ' + c.score.toFixed(3) + '  ' + c.name);
+      const barLen = Math.max(1, Math.round((c.score / top) * 20));
+      const bar = '█'.repeat(barLen);
+      console.log('  ' + c.score.toFixed(1).padStart(6) + '  ' + bar + '  ' + c.name);
+
       if (opts.explain) {
-        console.log('         Lexical:       ' + (c.breakdown.lexical || 0).toFixed(3));
-        console.log('         Semantic:      ' + (c.breakdown.semantic || 0).toFixed(3));
-        console.log('         Fused:         ' + c.breakdown.base.toFixed(3));
-        console.log('         Prerequisites: ' + (c.prerequisites_met ? 'OK' : 'MISSING: ' + c.prerequisites_missing.join(', ')));
-        console.log('         Auto-invoke:   ' + (c.never_auto_invoke ? 'BLOCKED' : 'allowed'));
+        console.log('           Lexical:       ' + c.breakdown.lexical.toFixed(1));
+        console.log('           Semantic:      ' + c.breakdown.semantic.toFixed(3));
+        console.log('           Fused (base):  ' + c.breakdown.base.toFixed(1));
+        console.log('           Prerequisites: ' + (c.prerequisites_met ? 'OK' : 'MISSING: ' + c.prerequisites_missing.join(', ')));
+        console.log('           Auto-invoke:   ' + (c.never_auto_invoke ? 'BLOCKED' : 'allowed'));
         if (c.breakdown.penalties.length > 0) {
           for (const p of c.breakdown.penalties) {
-            console.log('         Penalty:       ' + p.reason + ' (' + p.value + ')');
+            console.log('           Penalty:       ' + p.reason + ' (' + p.value + ')');
           }
         }
-        console.log('         -----------------------------');
-        console.log('         Final:         ' + c.score.toFixed(3));
-        console.log('         Matched terms: ' + ((c.breakdown.matched_terms || []).join(', ') || '(none)'));
-        console.log('         Source:        ' + c.source);
+        console.log('           --------------------------------');
+        console.log('           Final:         ' + c.score.toFixed(1));
+        console.log('           Matched terms: ' + ((c.breakdown.matched_terms || []).join(', ') || '(none)'));
+        console.log('           Source:        ' + c.source);
       } else {
-        console.log('         reason: ' + c.reason);
-        console.log('         tier: ' + c.cost_tier + ' | complexity: ' + c.complexity + ' | tokens: ~' + c.estimated_tokens);
-        if (!c.prerequisites_met) console.log('         prerequisites missing: ' + c.prerequisites_missing.join(', '));
-        if (c.never_auto_invoke) console.log('         never_auto_invoke: true');
-        console.log('         source: ' + c.source);
+        console.log('           ' + c.reason);
+        console.log('           tier: ' + c.cost_tier + ' | complexity: ' + c.complexity + ' | ~' + c.estimated_tokens + ' tokens');
+        if (!c.prerequisites_met) console.log('           prerequisites missing: ' + c.prerequisites_missing.join(', '));
+        if (c.never_auto_invoke) console.log('           never_auto_invoke: true');
       }
       console.log('');
     }
@@ -85,9 +96,7 @@ program
       join(process.cwd(), '.claude', 'skills')
     ];
     const results = await validateAll(roots);
-
     if (opts.json) { console.log(JSON.stringify(results, null, 2)); return; }
-
     let errs = 0, warns = 0;
     console.log('');
     for (const r of results) {
