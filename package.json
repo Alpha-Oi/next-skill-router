@@ -1,10 +1,23 @@
 {
   "name": "next-skill-router",
-  "version": "0.0.1",
-  "description": "Universal skill router for Claude Code.",
+  "version": "0.1.0",
+  "description": "Universal skill router for Claude Code and Codex.",
   "license": "MIT",
   "type": "module",
-  "private": true,
-  "workspaces": ["packages/*"],
-  "engines": { "node": ">=20" }
+  "bin": {
+    "next-skill-router": "./packages/cli/bin/router.mjs"
+  },
+  "scripts": {
+    "router": "node packages/cli/bin/router.mjs",
+    "list": "node packages/cli/bin/router.mjs list",
+    "demo": "node scripts/demo.mjs"
+  },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "minisearch": "^7.0.0",
+    "yaml": "^2.5.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
 }
