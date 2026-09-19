@@ -1,0 +1,10 @@
+{
+  "name": "next-skill-router",
+  "version": "0.0.1",
+  "description": "Universal skill router for Claude Code.",
+  "license": "MIT",
+  "type": "module",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "engines": { "node": ">=20" }
+}
