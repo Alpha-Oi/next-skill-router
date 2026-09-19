@@ -50,7 +50,7 @@ export async function route(query, opts = {}) {
 
   const fused = mode === 'hybrid'
     ? hybridRank(lexRanked, semRanked)
-    : lexRanked.map((r) => ({ name: r.name, score: r.score * SCORE_SCALE }));
+    : lexRanked.map((r) => ({ name: r.name, score: r.score }));
 
   const byName = new Map(skills.map((s) => [s.name, s]));
   const lexByName = new Map(lexRanked.map((r) => [r.name, r.score]));
