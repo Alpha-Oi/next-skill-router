@@ -1,38 +1,38 @@
 # SKILL-MANIFEST v0.2 (Draft RFC)
 
-**Статус:** Draft · Обсуждение: Discussions → General
-**Изменения в v0.2:** model_affinity, safety_profile, execution_mode, constraints.
+**Status:** Draft · Discussion: [GitHub Discussions](https://github.com/Alpha-Oi/next-skill-router/discussions)
+**Changes in v0.2:** added `model_affinity`, `safety_profile`, `execution_mode`, `constraints`.
 
-Опциональный файл метаданных рядом с SKILL.md. Роутер обязан работать
-без манифеста (fallback на SKILL.md). Наличие манифеста повышает точность
-маршрутизации.
+An optional metadata file placed next to `SKILL.md`. A router **must** work without it
+(falling back to plain `SKILL.md`). Its presence raises routing precision; it is not
+a lock-in.
 
 ---
 
-## 1. Базовая схема
+## 1. Base schema
 
-| Поле | Тип | Обязательно |
+| Field | Type | Required |
 | :--- | :--- | :---: |
-| name | string | да |
-| version | SemVer | да |
-| description | string | да |
-| intents | string[] | нет |
-| prerequisites.files | string[] | нет |
-| prerequisites.tools | string[] | нет |
-| complexity | low / medium / high | нет |
-| estimated_tokens | number | нет |
-| cost_tier | cheap / standard / premium | нет |
-| composable_with | string[] | нет |
-| conflicts_with | string[] | нет |
-| never_auto_invoke | boolean | нет |
-| language | string[] | нет |
+| name | string | yes |
+| version | SemVer | yes |
+| description | string | yes |
+| intents | string[] | no |
+| prerequisites.files | string[] | no |
+| prerequisites.tools | string[] | no |
+| complexity | low / medium / high | no |
+| estimated_tokens | number | no |
+| cost_tier | cheap / standard / premium | no |
+| composable_with | string[] | no |
+| conflicts_with | string[] | no |
+| never_auto_invoke | boolean | no |
+| language | string[] | no |
 
 ---
 
-## 2. model_affinity (v0.2)
+## 2. model_affinity (new in v0.2)
 
-Матрица предпочтений по классам моделей. Роутер сам выбирает конкретную
-модель внутри класса, исходя из доступности и стоимости.
+A preference matrix by **model class**, not by specific model. The router picks a
+concrete model inside the class based on availability and cost.
 
 ```yaml
 model_affinity:
@@ -57,18 +57,18 @@ model_affinity:
     vision: qwen-3.6-flash
 ```
 
-### Классы
+### Model classes
 
-| Класс | Назначение | Примеры |
+| Class | Purpose | Examples |
 | :--- | :--- | :--- |
-| cloud_frontier | Hard reasoning, security | Fable 5, Sol, Gemini 3.6, DeepSeek V4 Pro |
-| cloud_budget | Ежедневные задачи, routing | Luna, Haiku 4.5, Flash-Lite, V4 Flash |
-| local | Приватность, offline, compliance | Qwen 3 7B, Llama 3.3 8B, Mistral Small 3 |
-| specialized | Кибербезопасность, vision | Gemini Cyber, Qwen VL |
+| cloud_frontier | Hard reasoning, security | Fable 5, Sol, Astra, Gemini 3.6, DeepSeek V4 Pro |
+| cloud_budget | Daily work, summaries, routing | Luna, Haiku 4.5, Flash-Lite, V4 Flash |
+| local | Privacy, offline, compliance | Qwen 3 7B, Llama 3.3 8B, Mistral Small 3 |
+| specialized | Cyber security, vision | Gemini Cyber, Qwen VL |
 
 ---
 
-## 3. safety_profile (v0.2)
+## 3. safety_profile (new in v0.2)
 
 ```yaml
 safety_profile:
@@ -83,25 +83,36 @@ safety_profile:
   allowed_tools: [read, write, shell]
 ```
 
-Обоснование: GPT-5.6 Sol показывает 12.6% reward hacking. GPT-6 Astra
-продемонстрировала self-generated prompt injection через compaction
-summaries. Fable 5 «relentlessly proactive».
+| Field | Purpose |
+| :--- | :--- |
+| high_risk_models | Models with documented reward hacking |
+| requires_external_verification | Verify output on a second model |
+| verification_model | Which model verifies |
+| local_models_trusted | Trust local models without external checks |
+| benchmark_awareness | Detect "gaming the test" behaviour |
+| max_autonomous_steps | Step limit without human in the loop |
+| human_checkpoint_every | Mandatory confirmation cadence |
+
+Rationale: GPT-5.6 Sol exhibits **12.6% reward hacking**. GPT-6 Astra showed
+self-generated prompt injection via compaction summaries. Claude Fable 5 is
+"relentlessly proactive" and may act without explicit request. These are documented
+incidents, not hypotheticals.
 
 ---
 
-## 4. execution_mode (v0.2)
+## 4. execution_mode (new in v0.2)
 
 ```yaml
 execution_mode: sequential   # sequential | async | hybrid
 ```
 
-- sequential — Claude, Luna, большинство моделей.
-- async — Astra: параллельные tool calls.
-- hybrid — Astra планирует, Luna выполняет.
+- `sequential` — for models without async tool calling (Claude, Luna).
+- `async` — for Astra-class models: parallel tool calls.
+- `hybrid` — Astra plans, Luna executes in parallel.
 
 ---
 
-## 5. constraints (v0.2)
+## 5. constraints (new in v0.2)
 
 ```yaml
 constraints:
@@ -111,17 +122,25 @@ constraints:
   data_residency: EU
 ```
 
+| Field | Purpose |
+| :--- | :--- |
+| max_cost_per_call_usd | Hard cost ceiling |
+| require_local_only | Local models only (GDPR, HIPAA) |
+| require_offline | No network calls |
+| data_residency | Jurisdiction for compliance |
+
 ---
 
-## 6. Полный пример
+## 6. Complete example
 
 ```yaml
 name: code-review
 version: 1.3.0
-description: Проверка качества кода.
+description: "Check code quality and flag common mistakes."
 intents:
-  - "проверить качество кода"
+  - "check code quality"
   - "code quality check"
+  - "review my changes"
 prerequisites:
   files: [package.json, .git]
   tools: [git]
@@ -130,40 +149,55 @@ estimated_tokens: 8000
 cost_tier: cheap
 composable_with: [test-runner, linter]
 language: [js, ts, py]
+
 model_affinity:
   cloud_frontier:
     preferred: claude-fable-5
     reasoning_effort: high
+    thinking: adaptive
   cloud_budget:
     preferred: deepseek-v4-flash
   local:
     preferred: qwen-3-7b
     runtime: ollama
+
 safety_profile:
   requires_external_verification: false
   local_models_trusted: true
   max_autonomous_steps: 10
+
 execution_mode: sequential
+
 constraints:
   max_cost_per_call_usd: 0.02
 ```
 
 ---
 
-## 7. Fallback (без манифеста)
+## 7. Fallback (no manifest)
 
-1. Читает SKILL.md.
-2. name из первого # Heading.
-3. description — первый абзац.
-4. intents = [name, description].
-5. Остальное — значения по умолчанию.
-6. Маршрутизация идёт через cloud_budget tier.
+When `skill.manifest.yaml` is absent, the router:
+
+1. Reads `SKILL.md`.
+2. Extracts `name` from the first `# Heading`.
+3. Uses the first paragraph as `description`.
+4. Sets `intents = [name, description]`.
+5. Defaults everything else.
+6. Routes via the `cloud_budget` tier.
 
 ---
 
 ## 8. Roadmap
 
-- v0.1 — базовые поля, fallback.
-- v0.2 — model_affinity, safety_profile, execution_mode, constraints.
-- v0.3 — мультиязычные intents, output_schema.
-- v1.0 — заморозка после 3+ внешних реализаций.
+- v0.1 — base fields, fallback.
+- **v0.2 — model_affinity, safety_profile, execution_mode, constraints.**
+- v0.3 — multilingual intents, `output_schema`.
+- v1.0 — freeze after 3+ external implementations.
+
+---
+
+## 9. How to participate
+
+Open issues with the `spec` label, or comment in
+[Discussion #1](https://github.com/Alpha-Oi/next-skill-router/discussions/1).
+Any change to this spec requires a 7-day public comment period.

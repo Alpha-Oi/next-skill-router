@@ -1,26 +1,28 @@
 # ROUTER-PROTOCOL v0.2 (Draft RFC)
 
-**Статус:** Draft
-**Изменения в v0.2:** model_plan, execution_mode, steering, compaction_guard.
+**Status:** Draft
+**Changes in v0.2:** added `model_plan`, `execution_mode`, `steering`, `compaction_guard`.
 
 ---
 
-## 1. Назначение
+## 1. Purpose
 
-Формат обмена между роутером и хостом (Claude Code, Codex, MCP, CLI).
+Defines the data exchange format between a router and a host (Claude Code, Codex,
+MCP server, CLI). Any router supporting this protocol can exchange indexes and
+recommendation results.
 
 ---
 
-## 2. Точки взаимодействия
+## 2. Interaction points
 
-### 2.1 search
+### 2.1 search — request recommendations
 
-**Вход:**
+**Input:**
 
 ```json
 {
   "protocol_version": "0.2",
-  "query": "добавь фичу X с тестами",
+  "query": "add feature X with tests",
   "project_context": {
     "files": ["package.json", ".git/config"],
     "git_dirty": true,
@@ -39,7 +41,7 @@
 }
 ```
 
-**Выход:**
+**Output:**
 
 ```json
 {
@@ -48,7 +50,7 @@
     {
       "skill": "code-writer",
       "score": 0.94,
-      "reason": "semantic_match: 'добавь фичу'",
+      "reason": "semantic_match: add feature",
       "cost": { "tokens": 8000, "usd": 0.003 },
       "prerequisites_met": true,
       "model_plan": {
@@ -70,6 +72,13 @@
       "execution_mode": "async"
     }
   ],
+  "alternatives": [
+    {
+      "skill": "full-feature-pipeline",
+      "score": 0.81,
+      "reason": "ready-made chain, but +30% cost"
+    }
+  ],
   "total_cost": { "tokens": 12000, "usd": 0.008 },
   "decision_time_ms": 34,
   "steering": { "supported": true },
@@ -77,7 +86,7 @@
 }
 ```
 
-### 2.2 feedback
+### 2.2 feedback — user choice
 
 ```json
 {
@@ -90,7 +99,7 @@
 }
 ```
 
-### 2.3 steering
+### 2.3 steering — mid-turn adjustment
 
 ```json
 {
@@ -99,7 +108,7 @@
   "steering": {
     "action": "modify",
     "step": 2,
-    "note": "не делай ревью, только тесты"
+    "note": "skip review, run tests only"
   }
 }
 ```
@@ -119,31 +128,31 @@
 
 ---
 
-## 3. Коды ошибок
+## 3. Error codes
 
-| Код | Значение |
+| Code | Meaning |
 | :--- | :--- |
-| E_NO_MATCH | Ни один навык не подошёл |
-| E_BUDGET_EXCEEDED | Все кандидаты вне бюджета |
-| E_PREREQ_FAILED | Не выполнены предпосылки |
-| E_INDEX_STALE | Требуется переиндексация |
-| E_NO_LOCAL_RUNTIME | Нужна локальная модель, runtime не установлен |
-| E_OFFLINE_BLOCKED | Требуется offline, локальная модель недоступна |
-| E_SAFETY_BLOCK | Сработала защита |
+| E_NO_MATCH | No skill matched |
+| E_BUDGET_EXCEEDED | All candidates exceed budget |
+| E_PREREQ_FAILED | Prerequisites not met |
+| E_INDEX_STALE | Reindex required |
+| E_NO_LOCAL_RUNTIME | Local model required, runtime missing |
+| E_OFFLINE_BLOCKED | Offline required, local model unavailable |
+| E_SAFETY_BLOCK | Safety guard triggered |
 
 ---
 
-## 4. Версионирование
+## 4. Versioning
 
-SemVer. Хост обязан указывать protocol_version. Роутеры обязаны игнорировать
-неизвестные поля (forward compatibility).
+SemVer. The host **must** send `protocol_version`. Routers **must** ignore
+unknown fields (forward compatibility).
 
 ---
 
-## 5. Транспорт
+## 5. Transport
 
-- stdin/stdout JSON-RPC — CLI.
-- HTTP POST — MCP-сервер.
-- JSONL — телеметрия.
+- stdin/stdout JSON-RPC — for CLI.
+- HTTP POST — for MCP servers.
+- JSONL files — for telemetry.
 
-Кодировка UTF-8. Content-Type application/json.
+UTF-8. Content-Type: application/json.
