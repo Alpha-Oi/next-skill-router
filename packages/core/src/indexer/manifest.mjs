@@ -9,12 +9,14 @@ async function fileExists(p) {
 }
 
 function extractFrontmatter(md) {
-  const m = md.match(/^---\n([\s\S]*?)\n---\n/);
-  if (!m) return { data: {}, body: md };
+  // Нормализуем CRLF → LF
+  const norm = md.replace(/\r\n/g, '\n');
+  const m = norm.match(/^---\n([\s\S]*?)\n---\n?/);
+  if (!m) return { data: {}, body: norm };
   try {
-    return { data: YAML.parse(m[1]) || {}, body: md.slice(m[0].length) };
+    return { data: YAML.parse(m[1]) || {}, body: norm.slice(m[0].length) };
   } catch {
-    return { data: {}, body: md };
+    return { data: {}, body: norm };
   }
 }
 
@@ -24,18 +26,24 @@ function extractHeading(body) {
 }
 
 function extractFirstParagraph(body) {
-  const lines = body.split('\n').slice(1).filter((l) => l.trim() && !l.startsWith('#'));
-  return lines[0]?.trim() ?? '';
+  const lines = body.split('\n');
+  for (const line of lines) {
+    const t = line.trim();
+    if (!t) continue;
+    if (t.startsWith('#')) continue;
+    if (t.startsWith('---')) continue;
+    if (t.startsWith('>')) return t.replace(/^>\s*/, '');
+    // Пропускаем «key: value» — это остатки YAML
+    if (/^[a-z_][a-z0-9_]*\s*:/i.test(t)) continue;
+    if (t.startsWith('-')) continue;
+    return t.slice(0, 200);
+  }
+  return '';
 }
 
-/**
- * Парсит метаданные навыка: frontmatter SKILL.md + опциональный skill.manifest.yaml.
- * Спецификация: spec/SKILL-MANIFEST.md
- */
 export async function parseManifest(skillDir, skillMd) {
   const dirName = basename(skillDir);
   let manifest = null;
-  let manifestSource = null;
 
   for (const mn of MANIFEST_NAMES) {
     const p = join(skillDir, mn);
@@ -43,7 +51,6 @@ export async function parseManifest(skillDir, skillMd) {
       const raw = await readFile(p, 'utf8');
       try {
         manifest = mn.endsWith('.json') ? JSON.parse(raw) : YAML.parse(raw);
-        manifestSource = mn;
         break;
       } catch (e) {
         console.warn('WARN: failed to parse ' + p + ': ' + e.message);
@@ -53,14 +60,16 @@ export async function parseManifest(skillDir, skillMd) {
 
   const { data: fm, body } = extractFrontmatter(skillMd);
   const merged = { ...fm, ...(manifest || {}) };
-
   const hasFm = Object.keys(fm).length > 0;
   const source = manifest ? 'manifest' : hasFm ? 'frontmatter' : 'fallback';
 
+  const fallbackName = extractHeading(body) ?? dirName;
+  const fallbackDesc = extractFirstParagraph(body);
+
   return {
-    name: merged.name ?? dirName,
+    name: merged.name ?? fallbackName,
     version: merged.version ?? '0.0.0',
-    description: merged.description ?? extractFirstParagraph(body) ?? '',
+    description: merged.description ?? fallbackDesc,
     intents: merged.intents ?? [],
     prerequisites: merged.prerequisites ?? { files: [], tools: [] },
     complexity: merged.complexity ?? 'medium',
