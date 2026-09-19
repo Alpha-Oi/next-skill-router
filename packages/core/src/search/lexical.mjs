@@ -5,9 +5,10 @@ export function buildLexicalIndex(skills) {
     fields: ['name', 'description', 'intents', 'language'],
     storeFields: ['name', 'description', 'complexity', 'cost_tier'],
     searchOptions: {
-      boost: { name: 2.5, intents: 2, description: 1 },
-      fuzzy: 0.2,
-      prefix: true
+      boost: { name: 3, intents: 2, description: 1 },
+      fuzzy: 0.1,           // было 0.2 — уменьшили, чтобы не было ложных срабатываний
+      prefix: true,
+      combineWith: 'AND'    // все термины запроса должны присутствовать
     }
   });
 
@@ -23,5 +24,11 @@ export function buildLexicalIndex(skills) {
 }
 
 export function lexicalSearch(mini, query, limit = 10) {
-  return mini.search(query).slice(0, limit);
+  // Сначала пробуем строгий AND-поиск.
+  let results = mini.search(query);
+  // Если пусто — ослабляем до OR (без combineWith), но всё ещё без fuzzy на коротких терминах.
+  if (results.length === 0) {
+    results = mini.search(query, { combineWith: 'OR', fuzzy: false });
+  }
+  return results.slice(0, limit);
 }

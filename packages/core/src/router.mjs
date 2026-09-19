@@ -4,9 +4,6 @@ import { existsSync } from 'node:fs';
 import { scanDirs } from './indexer/scanner.mjs';
 import { buildLexicalIndex, lexicalSearch } from './search/lexical.mjs';
 
-/**
- * Загружает навыки из стандартных директорий Claude Code.
- */
 export async function loadSkills(projectDir = process.cwd()) {
   const dirs = [
     join(homedir(), '.claude', 'skills'),
@@ -15,10 +12,6 @@ export async function loadSkills(projectDir = process.cwd()) {
   return await scanDirs(dirs);
 }
 
-/**
- * Главная функция маршрутизации.
- * Возвращает топ-N кандидатов с оценками и объяснениями.
- */
 export async function route(query, opts = {}) {
   const projectDir = opts.projectDir ?? process.cwd();
   const limit = opts.limit ?? 5;
@@ -38,10 +31,16 @@ export async function route(query, opts = {}) {
     if (!prereqs.met) score -= 0.3;
     if (skill.never_auto_invoke) score -= 0.5;
 
+    // Оставляем только термины с реальным совпадением (длина >= 3)
+    const matched = (r.terms ?? []).filter((t) => t.length >= 3);
+    const reason = matched.length
+      ? 'lexical match: ' + matched.join(', ')
+      : 'lexical match';
+
     return {
       name: skill.name,
       score,
-      reason: 'lexical match: ' + (r.terms?.join(', ') ?? ''),
+      reason,
       complexity: skill.complexity,
       cost_tier: skill.cost_tier,
       estimated_tokens: skill.estimated_tokens,
@@ -53,12 +52,7 @@ export async function route(query, opts = {}) {
   });
 
   candidates.sort((a, b) => b.score - a.score);
-
-  return {
-    query,
-    total_skills: skills.length,
-    candidates: candidates.slice(0, limit)
-  };
+  return { query, total_skills: skills.length, candidates: candidates.slice(0, limit) };
 }
 
 function checkPrereqs(skill, projectDir) {
