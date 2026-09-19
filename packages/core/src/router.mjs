@@ -3,6 +3,8 @@ import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 import { scanDirs } from './indexer/scanner.mjs';
 import { buildLexicalIndex, lexicalSearch } from './search/lexical.mjs';
+import { buildSemanticIndex, semanticSearch } from './search/semantic.mjs';
+import { hybridRank } from './search/hybrid.mjs';
 
 export async function loadSkills(projectDir = process.cwd()) {
   const dirs = [
@@ -15,33 +17,53 @@ export async function loadSkills(projectDir = process.cwd()) {
 export async function route(query, opts = {}) {
   const projectDir = opts.projectDir ?? process.cwd();
   const limit = opts.limit ?? 5;
+  const useSemantic = opts.semantic !== false;
 
   const skills = await loadSkills(projectDir);
-  if (skills.length === 0) return { query, total_skills: 0, candidates: [] };
+  if (skills.length === 0) return { query, total_skills: 0, candidates: [], mode: 'lexical' };
 
-  const mini = buildLexicalIndex(skills);
-  const results = lexicalSearch(mini, query, limit * 3);
+  const lexicalIndex = buildLexicalIndex(skills);
+  const lexResults = lexicalSearch(lexicalIndex, query, limit * 3);
+  const lexRanked = lexResults.map((r) => ({ name: skills[r.id].name, score: r.score }));
 
-  const candidates = results.map((r) => {
-    const skill = skills[r.id];
+  let semRanked = [];
+  let mode = 'lexical';
+  if (useSemantic) {
+    try {
+      const semIndex = await buildSemanticIndex(skills);
+      semRanked = await semanticSearch(query, semIndex);
+      mode = 'hybrid';
+    } catch (e) {
+      console.warn('  semantic failed: ' + e.message + ' — falling back to lexical');
+    }
+  }
+
+  const fused = mode === 'hybrid'
+    ? hybridRank(lexRanked, semRanked)
+    : lexRanked.map((r) => ({ name: r.name, score: r.score }));
+
+  const byName = new Map(skills.map((s) => [s.name, s]));
+  const lexByName = new Map(lexRanked.map((r) => [r.name, r.score]));
+  const semByName = new Map(semRanked.map((r) => [r.name, r.score]));
+
+  const candidates = fused.slice(0, limit * 2).map((f) => {
+    const skill = byName.get(f.name);
     const prereqs = checkPrereqs(skill, projectDir);
     const penalties = [];
-    let score = r.score;
+    let score = f.score;
 
     if (!prereqs.met) { score -= 0.3; penalties.push({ reason: 'prerequisites missing', value: -0.3 }); }
     if (skill.never_auto_invoke) { score -= 0.5; penalties.push({ reason: 'never_auto_invoke', value: -0.5 }); }
 
-    const matched = (r.terms ?? []).filter((t) => t.length >= 3);
-    const reason = matched.length ? 'lexical match: ' + matched.join(', ') : 'lexical match';
-
     return {
       name: skill.name,
       score,
-      reason,
+      reason: mode === 'hybrid' ? 'hybrid (lexical + semantic)' : 'lexical match',
       breakdown: {
-        base: r.score,
-        penalties,
-        matched_terms: matched
+        base: f.score,
+        lexical: lexByName.get(f.name) || 0,
+        semantic: semByName.get(f.name) || 0,
+        penalties
       },
       complexity: skill.complexity,
       cost_tier: skill.cost_tier,
@@ -54,7 +76,13 @@ export async function route(query, opts = {}) {
   });
 
   candidates.sort((a, b) => b.score - a.score);
-  return { query, total_skills: skills.length, candidates: candidates.slice(0, limit) };
+
+  return {
+    query,
+    total_skills: skills.length,
+    mode,
+    candidates: candidates.slice(0, limit)
+  };
 }
 
 function checkPrereqs(skill, projectDir) {

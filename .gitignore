@@ -8,3 +8,5 @@ coverage/
 *.tsbuildinfo
 .env
 .env.local
+
+.claude/

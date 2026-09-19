@@ -17,14 +17,15 @@ program
   .option('-l, --limit <n>', 'number of results', '5')
   .option('--json', 'output as JSON')
   .option('--explain', 'show score breakdown')
+  .option('--no-semantic', 'disable semantic search (lexical only)')
   .action(async (query, opts) => {
-    const result = await route(query, { limit: parseInt(opts.limit, 10) });
+    const result = await route(query, { limit: parseInt(opts.limit, 10), semantic: opts.semantic });
 
     if (opts.json) { console.log(JSON.stringify(result, null, 2)); return; }
 
     console.log('');
     console.log('Query: ' + query);
-    console.log('Total skills: ' + result.total_skills);
+    console.log('Total skills: ' + result.total_skills + ' | mode: ' + (result.mode || 'lexical'));
     console.log('');
 
     if (result.candidates.length === 0) { console.log('  No matches.'); console.log(''); return; }
@@ -32,7 +33,9 @@ program
     for (const c of result.candidates) {
       console.log('  ' + c.score.toFixed(3) + '  ' + c.name);
       if (opts.explain) {
-        console.log('         Base lexical:  ' + c.breakdown.base.toFixed(3));
+        console.log('         Lexical:       ' + (c.breakdown.lexical || 0).toFixed(3));
+        console.log('         Semantic:      ' + (c.breakdown.semantic || 0).toFixed(3));
+        console.log('         Fused:         ' + c.breakdown.base.toFixed(3));
         console.log('         Prerequisites: ' + (c.prerequisites_met ? 'OK' : 'MISSING: ' + c.prerequisites_missing.join(', ')));
         console.log('         Auto-invoke:   ' + (c.never_auto_invoke ? 'BLOCKED' : 'allowed'));
         if (c.breakdown.penalties.length > 0) {
