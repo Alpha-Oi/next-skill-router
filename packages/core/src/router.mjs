@@ -24,7 +24,11 @@ export async function route(query, opts = {}) {
 
   const lexicalIndex = buildLexicalIndex(skills);
   const lexResults = lexicalSearch(lexicalIndex, query, limit * 3);
-  const lexRanked = lexResults.map((r) => ({ name: skills[r.id].name, score: r.score }));
+  const lexRanked = lexResults.map((r) => ({
+    name: skills[r.id].name,
+    score: r.score,
+    terms: r.terms || []
+  }));
 
   let semRanked = [];
   let mode = 'lexical';
@@ -44,6 +48,7 @@ export async function route(query, opts = {}) {
 
   const byName = new Map(skills.map((s) => [s.name, s]));
   const lexByName = new Map(lexRanked.map((r) => [r.name, r.score]));
+  const lexTermsByName = new Map(lexRanked.map((r) => [r.name, r.terms || []]));
   const semByName = new Map(semRanked.map((r) => [r.name, r.score]));
 
   const candidates = fused.slice(0, limit * 2).map((f) => {
@@ -63,6 +68,7 @@ export async function route(query, opts = {}) {
         base: f.score,
         lexical: lexByName.get(f.name) || 0,
         semantic: semByName.get(f.name) || 0,
+        matched_terms: lexTermsByName.get(f.name) || [],
         penalties
       },
       complexity: skill.complexity,

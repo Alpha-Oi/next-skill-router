@@ -1,13 +1,21 @@
 /**
  * Локальный embedder на базе ONNX MiniLM (Xenova/all-MiniLM-L6-v2).
- * Модель скачивается при первом использовании (~80 МБ) и кешируется.
- * Никаких сетевых вызовов во время работы — после первой загрузки всё офлайн.
+ * Модель скачивается при первом использовании (~80 МБ) в ~/.claude/skill-router/models/.
+ * После первой загрузки — полностью офлайн.
  */
+
+import { mkdir } from 'node:fs/promises';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 
 let pipelineFn = null;
 let loading = null;
 
 const MODEL_NAME = 'Xenova/all-MiniLM-L6-v2';
+
+function getCacheDir() {
+  return process.env.NSR_CACHE_DIR || join(homedir(), '.claude', 'skill-router', 'models');
+}
 
 async function getPipeline() {
   if (pipelineFn) return pipelineFn;
@@ -15,9 +23,16 @@ async function getPipeline() {
 
   loading = (async () => {
     const { pipeline, env } = await import('@xenova/transformers');
-    // Кешируем модель в ~/.claude/skill-router/cache/
-    env.cacheDir = process.env.NSR_CACHE_DIR || undefined;
+
+    // Всегда задаём конкретный путь — не undefined.
+    const cacheDir = getCacheDir();
+    await mkdir(cacheDir, { recursive: true });
+
+    env.cacheDir = cacheDir;
+    env.useBrowserCache = false;
     env.allowLocalModels = true;
+    env.allowRemoteModels = true; // скачает один раз, дальше из кеша
+
     pipelineFn = await pipeline('feature-extraction', MODEL_NAME, { quantized: true });
     return pipelineFn;
   })();
@@ -25,23 +40,18 @@ async function getPipeline() {
   return loading;
 }
 
-/**
- * Эмбеддинг текста. Возвращает Float32Array нормализованный.
- */
 export async function embed(text) {
   const pipe = await getPipeline();
   const out = await pipe(text, { pooling: 'mean', normalize: true });
   return Array.from(out.data);
 }
 
-/**
- * Эмбеддинг батчем.
- */
 export async function embedBatch(texts) {
   const pipe = await getPipeline();
   const out = await pipe(texts, { pooling: 'mean', normalize: true });
-  // out.dims = [n, dim]
-  const [n, dim] = out.dims;
+  const dims = out.dims;
+  const n = dims[0];
+  const dim = dims[dims.length - 1];
   const arr = Array.from(out.data);
   const results = [];
   for (let i = 0; i < n; i++) {
@@ -50,9 +60,6 @@ export async function embedBatch(texts) {
   return results;
 }
 
-/**
- * Косинусная близость. Для нормализованных векторов = скалярное произведение.
- */
 export function cosine(a, b) {
   let dot = 0;
   const len = Math.min(a.length, b.length);
@@ -60,9 +67,6 @@ export function cosine(a, b) {
   return dot;
 }
 
-/**
- * Проверка, доступен ли embedder. Если модель ещё не загружена — грузим.
- */
 export async function isAvailable() {
   try {
     await getPipeline();

@@ -45,7 +45,7 @@ program
         }
         console.log('         -----------------------------');
         console.log('         Final:         ' + c.score.toFixed(3));
-        console.log('         Matched terms: ' + (c.breakdown.matched_terms.join(', ') || '(none)'));
+        console.log('         Matched terms: ' + ((c.breakdown.matched_terms || []).join(', ') || '(none)'));
         console.log('         Source:        ' + c.source);
       } else {
         console.log('         reason: ' + c.reason);
