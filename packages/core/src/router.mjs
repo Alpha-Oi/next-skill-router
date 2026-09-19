@@ -17,9 +17,7 @@ export async function route(query, opts = {}) {
   const limit = opts.limit ?? 5;
 
   const skills = await loadSkills(projectDir);
-  if (skills.length === 0) {
-    return { query, total_skills: 0, candidates: [] };
-  }
+  if (skills.length === 0) return { query, total_skills: 0, candidates: [] };
 
   const mini = buildLexicalIndex(skills);
   const results = lexicalSearch(mini, query, limit * 3);
@@ -27,20 +25,24 @@ export async function route(query, opts = {}) {
   const candidates = results.map((r) => {
     const skill = skills[r.id];
     const prereqs = checkPrereqs(skill, projectDir);
+    const penalties = [];
     let score = r.score;
-    if (!prereqs.met) score -= 0.3;
-    if (skill.never_auto_invoke) score -= 0.5;
 
-    // Оставляем только термины с реальным совпадением (длина >= 3)
+    if (!prereqs.met) { score -= 0.3; penalties.push({ reason: 'prerequisites missing', value: -0.3 }); }
+    if (skill.never_auto_invoke) { score -= 0.5; penalties.push({ reason: 'never_auto_invoke', value: -0.5 }); }
+
     const matched = (r.terms ?? []).filter((t) => t.length >= 3);
-    const reason = matched.length
-      ? 'lexical match: ' + matched.join(', ')
-      : 'lexical match';
+    const reason = matched.length ? 'lexical match: ' + matched.join(', ') : 'lexical match';
 
     return {
       name: skill.name,
       score,
       reason,
+      breakdown: {
+        base: r.score,
+        penalties,
+        matched_terms: matched
+      },
       complexity: skill.complexity,
       cost_tier: skill.cost_tier,
       estimated_tokens: skill.estimated_tokens,
