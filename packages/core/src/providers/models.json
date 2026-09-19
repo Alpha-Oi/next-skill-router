@@ -1,0 +1,441 @@
+{
+  "providers": [
+    {
+      "name": "anthropic",
+      "endpoint": "https://api.anthropic.com/v1",
+      "apiType": "anthropic",
+      "apiKeyEnv": "ANTHROPIC_API_KEY",
+      "models": [
+        {
+          "id": "claude-fable-5",
+          "tier": "cloud_frontier",
+          "context": 1000000,
+          "price_input": 10,
+          "price_output": 50,
+          "capabilities": {
+            "tools": true,
+            "vision": true,
+            "async_tools": false,
+            "adaptive_thinking": true,
+            "offline": false
+          },
+          "safety": {
+            "reward_hacking_risk": 0.02,
+            "monitorability": "medium",
+            "compaction_risk": "low",
+            "requires_verification": false
+          },
+          "notes": "Adaptive thinking always on; rejects thinking:disabled."
+        },
+        {
+          "id": "claude-opus-5",
+          "tier": "cloud_frontier",
+          "context": 1000000,
+          "price_input": 5,
+          "price_output": 25,
+          "capabilities": {
+            "tools": true,
+            "vision": true,
+            "async_tools": false,
+            "adaptive_thinking": true,
+            "offline": false
+          },
+          "safety": {
+            "reward_hacking_risk": 0.02,
+            "monitorability": "medium",
+            "compaction_risk": "low",
+            "requires_verification": false
+          }
+        },
+        {
+          "id": "claude-sonnet-5",
+          "tier": "cloud_budget",
+          "context": 1000000,
+          "price_input": 2,
+          "price_output": 10,
+          "capabilities": {
+            "tools": true,
+            "vision": true,
+            "async_tools": false,
+            "adaptive_thinking": false,
+            "offline": false
+          },
+          "safety": {
+            "reward_hacking_risk": 0.01,
+            "monitorability": "high",
+            "compaction_risk": "low",
+            "requires_verification": false
+          }
+        },
+        {
+          "id": "claude-haiku-4.5",
+          "tier": "cloud_budget",
+          "context": 200000,
+          "price_input": 1,
+          "price_output": 5,
+          "capabilities": {
+            "tools": true,
+            "vision": false,
+            "async_tools": false,
+            "adaptive_thinking": false,
+            "offline": false
+          },
+          "safety": {
+            "reward_hacking_risk": 0.01,
+            "monitorability": "high",
+            "compaction_risk": "low",
+            "requires_verification": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "openai",
+      "endpoint": "https://api.openai.com/v1",
+      "apiType": "openai",
+      "apiKeyEnv": "OPENAI_API_KEY",
+      "models": [
+        {
+          "id": "gpt-6-astra",
+          "tier": "cloud_frontier",
+          "context": 1050000,
+          "price_input": 10,
+          "price_output": 50,
+          "capabilities": {
+            "tools": true,
+            "vision": true,
+            "async_tools": true,
+            "adaptive_thinking": true,
+            "offline": false
+          },
+          "safety": {
+            "reward_hacking_risk": 0.08,
+            "monitorability": "low",
+            "compaction_risk": "high",
+            "requires_verification": true,
+            "known_incidents": [
+              "self-generated prompt injection via compaction summaries"
+            ]
+          }
+        },
+        {
+          "id": "gpt-5.6-sol",
+          "tier": "cloud_frontier",
+          "context": 1000000,
+          "price_input": 5,
+          "price_output": 30,
+          "capabilities": {
+            "tools": true,
+            "vision": true,
+            "async_tools": false,
+            "adaptive_thinking": false,
+            "offline": false
+          },
+          "safety": {
+            "reward_hacking_risk": 0.126,
+            "monitorability": "high",
+            "compaction_risk": "low",
+            "requires_verification": true,
+            "known_incidents": [
+              "Hugging Face sandbox escape (2026)"
+            ]
+          }
+        },
+        {
+          "id": "gpt-5.6-terra",
+          "tier": "cloud_budget",
+          "context": 1000000,
+          "price_input": 2.5,
+          "price_output": 15,
+          "capabilities": {
+            "tools": true,
+            "vision": true,
+            "async_tools": false,
+            "adaptive_thinking": false,
+            "offline": false
+          },
+          "safety": {
+            "reward_hacking_risk": 0.04,
+            "monitorability": "high",
+            "compaction_risk": "low",
+            "requires_verification": false
+          }
+        },
+        {
+          "id": "gpt-5.6-luna",
+          "tier": "cloud_budget",
+          "context": 1000000,
+          "price_input": 1,
+          "price_output": 6,
+          "capabilities": {
+            "tools": true,
+            "vision": false,
+            "async_tools": false,
+            "adaptive_thinking": false,
+            "offline": false
+          },
+          "safety": {
+            "reward_hacking_risk": 0.01,
+            "monitorability": "high",
+            "compaction_risk": "low",
+            "requires_verification": false
+          },
+          "notes": "Default for routing, tagging, verification."
+        }
+      ]
+    },
+    {
+      "name": "google",
+      "endpoint": "https://generativelanguage.googleapis.com/v1beta",
+      "apiType": "google",
+      "apiKeyEnv": "GEMINI_API_KEY",
+      "models": [
+        {
+          "id": "gemini-3.6-flash",
+          "tier": "cloud_budget",
+          "context": 1000000,
+          "price_input": 1.5,
+          "price_output": 7.5,
+          "capabilities": {
+            "tools": true,
+            "vision": true,
+            "async_tools": false,
+            "adaptive_thinking": false,
+            "offline": false
+          },
+          "safety": {
+            "reward_hacking_risk": 0.02,
+            "monitorability": "high",
+            "compaction_risk": "low",
+            "requires_verification": false
+          },
+          "notes": "-17% output tokens vs 3.5 Flash."
+        },
+        {
+          "id": "gemini-3.5-flash-lite",
+          "tier": "cloud_budget",
+          "context": 1000000,
+          "price_input": 0.5,
+          "price_output": 2,
+          "capabilities": {
+            "tools": true,
+            "vision": false,
+            "async_tools": false,
+            "adaptive_thinking": false,
+            "offline": false
+          },
+          "safety": {
+            "reward_hacking_risk": 0.01,
+            "monitorability": "high",
+            "compaction_risk": "low",
+            "requires_verification": false
+          }
+        },
+        {
+          "id": "gemini-3.5-flash-cyber",
+          "tier": "specialized",
+          "context": 1000000,
+          "price_input": 1.5,
+          "price_output": 7.5,
+          "capabilities": {
+            "tools": true,
+            "vision": false,
+            "async_tools": false,
+            "adaptive_thinking": false,
+            "offline": false
+          },
+          "safety": {
+            "reward_hacking_risk": 0.01,
+            "monitorability": "high",
+            "compaction_risk": "low",
+            "requires_verification": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "deepseek",
+      "endpoint": "https://api.deepseek.com/v1",
+      "apiType": "openai",
+      "apiKeyEnv": "DEEPSEEK_API_KEY",
+      "models": [
+        {
+          "id": "deepseek-v4-pro",
+          "tier": "cloud_frontier",
+          "context": 1000000,
+          "price_input": 1.74,
+          "price_output": 3.48,
+          "capabilities": {
+            "tools": true,
+            "vision": false,
+            "async_tools": false,
+            "adaptive_thinking": false,
+            "offline": false
+          },
+          "safety": {
+            "reward_hacking_risk": 0.03,
+            "monitorability": "medium",
+            "compaction_risk": "low",
+            "requires_verification": false
+          }
+        },
+        {
+          "id": "deepseek-v4-flash",
+          "tier": "cloud_budget",
+          "context": 1000000,
+          "price_input": 0.14,
+          "price_output": 0.28,
+          "capabilities": {
+            "tools": true,
+            "vision": false,
+            "async_tools": false,
+            "adaptive_thinking": false,
+            "offline": false
+          },
+          "safety": {
+            "reward_hacking_risk": 0.02,
+            "monitorability": "high",
+            "compaction_risk": "low",
+            "requires_verification": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "mistral",
+      "endpoint": "https://api.mistral.ai/v1",
+      "apiType": "openai",
+      "apiKeyEnv": "MISTRAL_API_KEY",
+      "models": [
+        {
+          "id": "mistral-large-3",
+          "tier": "cloud_budget",
+          "context": 256000,
+          "price_input": 0.5,
+          "price_output": 1.5,
+          "capabilities": {
+            "tools": true,
+            "vision": false,
+            "async_tools": false,
+            "adaptive_thinking": false,
+            "offline": false
+          },
+          "safety": {
+            "reward_hacking_risk": 0.02,
+            "monitorability": "high",
+            "compaction_risk": "low",
+            "requires_verification": false
+          }
+        },
+        {
+          "id": "mistral-small-4",
+          "tier": "cloud_budget",
+          "context": 128000,
+          "price_input": 0.15,
+          "price_output": 0.6,
+          "capabilities": {
+            "tools": true,
+            "vision": false,
+            "async_tools": false,
+            "adaptive_thinking": false,
+            "offline": false
+          },
+          "safety": {
+            "reward_hacking_risk": 0.01,
+            "monitorability": "high",
+            "compaction_risk": "low",
+            "requires_verification": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "qwen",
+      "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+      "apiType": "openai",
+      "apiKeyEnv": "QWEN_API_KEY",
+      "models": [
+        {
+          "id": "qwen-3.6-plus",
+          "tier": "cloud_frontier",
+          "context": 1000000,
+          "price_input": 0.5,
+          "price_output": 3,
+          "capabilities": {
+            "tools": true,
+            "vision": false,
+            "async_tools": false,
+            "adaptive_thinking": false,
+            "offline": false
+          },
+          "safety": {
+            "reward_hacking_risk": 0.02,
+            "monitorability": "high",
+            "compaction_risk": "low",
+            "requires_verification": false
+          }
+        },
+        {
+          "id": "qwen-3.6-flash",
+          "tier": "cloud_budget",
+          "context": 1000000,
+          "price_input": 0.1,
+          "price_output": 0.4,
+          "capabilities": {
+            "tools": true,
+            "vision": true,
+            "async_tools": false,
+            "adaptive_thinking": false,
+            "offline": false
+          },
+          "safety": {
+            "reward_hacking_risk": 0.01,
+            "monitorability": "high",
+            "compaction_risk": "low",
+            "requires_verification": false
+          }
+        }
+      ]
+    }
+  ],
+  "localRuntimes": [
+    {
+      "name": "ollama",
+      "endpoint": "http://localhost:11434",
+      "apiType": "ollama",
+      "apiKeyEnv": null,
+      "knownModels": {
+        "qwen3:7b": {
+          "context": 128000,
+          "notes": "HumanEval 76.0"
+        },
+        "llama3.3:8b": {
+          "context": 128000,
+          "notes": "HumanEval 72.6"
+        },
+        "mistral-small:7b": {
+          "context": 128000,
+          "notes": "HumanEval 68.2"
+        },
+        "phi-4-mini": {
+          "context": 128000,
+          "notes": "MIT"
+        }
+      }
+    },
+    {
+      "name": "vllm",
+      "endpoint": "http://localhost:8000/v1",
+      "apiType": "openai",
+      "apiKeyEnv": null,
+      "knownModels": {}
+    },
+    {
+      "name": "lmstudio",
+      "endpoint": "http://localhost:1234/v1",
+      "apiType": "openai",
+      "apiKeyEnv": null,
+      "knownModels": {}
+    }
+  ]
+}
