@@ -4,9 +4,9 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { route, loadSkills } from '../../core/src/router.mjs';
 import { validateAll } from '../../core/src/indexer/validator.mjs';
-import { record, stats as getStats, weights as getWeights, resetWeights } from '../../../learner/src/collector.mjs';
-import { getFeedbackPath } from '../../../learner/src/storage.mjs';
-import { getWeightsPath } from '../../../learner/src/weights.mjs';
+import { record, stats as getStats, weights as getWeights, resetWeights } from '../../learner/src/collector.mjs';
+import { getFeedbackPath } from '../../learner/src/storage.mjs';
+import { getWeightsPath } from '../../learner/src/weights.mjs';
 
 const program = new Command();
 program
@@ -279,6 +279,28 @@ program
     console.log('Feedback:  ' + getFeedbackPath());
     console.log('Weights:   ' + getWeightsPath());
     console.log('');
+  });
+
+
+program
+  .command('init')
+  .description('Install Claude Code hook (SessionStart)')
+  .option('--dry-run', 'show what would be changed, do not write')
+  .action(async (opts) => {
+    const { spawnSync } = await import('node:child_process');
+    const { fileURLToPath } = await import('node:url');
+    const { dirname } = await import('node:path');
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const installScript = join(__dirname, '..', '..', '..', 'integrations', 'claude-code', 'install.mjs');
+
+    if (opts.dryRun) {
+      console.log('Would run: node ' + installScript);
+      return;
+    }
+
+    const result = spawnSync('node', [installScript], { stdio: 'inherit' });
+    process.exit(result.status ?? 0);
   });
 
 program.parse();
