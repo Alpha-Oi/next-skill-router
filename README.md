@@ -1,12 +1,12 @@
 # next-skill-router
 
-> An open standard for routing skills across Claude Code and Codex — with cost-aware model selection, a feedback loop, and local-first execution.
+> An open standard for routing skills across Claude Code and Codex — with cost-aware model selection, secret redaction, and local-first execution.
 
 [![Status](https://img.shields.io/badge/status-alpha-yellow)](https://github.com/Alpha-Oi/next-skill-router)
-[![Tests](https://img.shields.io/badge/tests-8_passing-success)](https://github.com/Alpha-Oi/next-skill-router/actions)
+[![Tests](https://img.shields.io/badge/tests-32_passing-success)](https://github.com/Alpha-Oi/next-skill-router)
 [![License](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
-[![Spec](https://img.shields.io/badge/spec-SKILL--MANIFEST_v0.2-purple)](./spec/SKILL-MANIFEST.md)
+[![Spec](https://img.shields.io/badge/spec-SKILL--MANIFEST_v0.3.1-purple)](./spec/SKILL-MANIFEST.md)
 [![Discussions](https://img.shields.io/badge/discussions-4_open-orange)](https://github.com/Alpha-Oi/next-skill-router/discussions)
 
 ---
@@ -36,19 +36,47 @@ can adopt, and (2) a reference implementation that fixes all five.
 ## Quick demo
 
 ```
-$ node packages/cli/bin/router.mjs search "run tests" --explain
+$ node packages/cli/bin/router.mjs search "проверь код" --explain
+
+Query: проверь код
+Total skills: 47 | mode: hybrid
+
+    32.5  ####################  code-review
+           Lexical:       8.7
+           Semantic:      0.517
+           Fused (base):  32.5
+           Prerequisites: OK
+           Auto-invoke:   allowed
+           --------------------------------
+           Final:         32.5
+           Matched terms: код, кода
+           Source:        frontmatter
+           Model:         qwen3:7b (local, ollama)
+           Model reason:  cheapest in tier=local
+           Est. cost:     $0 (offline)
+```
+
+Cost-aware:
+
+```
+$ node packages/cli/bin/router.mjs search "run tests" --budget-usd 0.01 --explain
 
 Query: run tests
-Total skills: 11
+Total skills: 47 | mode: hybrid
+Policy: budget=$0.01
 
-  35.388  test-runner
-         Base lexical:  35.388
-         Prerequisites: OK
-         Auto-invoke:   allowed
-         -----------------------------
-         Final:         35.388
-         Matched terms: run, runner, tests, test
-         Source:        frontmatter
+    32.8  ####################  test-runner
+           Model:         deepseek-v4-flash (cloud_budget, deepseek)
+           Est. cost:     $0.0002
+```
+
+Secrets are redacted at ingest:
+
+```
+$ node packages/cli/bin/router.mjs search "fix code with sk-abcdefghijklmnopqrstuvwx" --no-semantic
+
+Query: fix code with sk-abcdefghijklmnopqrstuvwx
+After stopword filter: "fix code [REDACTED:OPENAI_API_KEY]"
 ```
 
 ---
@@ -63,67 +91,62 @@ npm install
 
 **Requirements:** Node.js 20+, git.
 
-Optional (for future semantic search): none — it will use a bundled ONNX model.
+Optional: [Ollama](https://ollama.com/) with `qwen3:7b` for local-first routing ($0, offline).
 
 ---
 
 ## Usage
 
-### List installed skills
+### Search with cost-aware routing
 
 ```bash
-node packages/cli/bin/router.mjs list
-```
-
-Output:
-```
-Found 11 skills:
-
-  code-review                  [frontmatter]
-     Проверка качества кода и выявление типичных ошибок.
-  test-runner                  [frontmatter]
-     Запуск и анализ тестов проекта.
-  ...
-```
-
-### Search for a skill
-
-```bash
+# Basic
 node packages/cli/bin/router.mjs search "run tests"
-node packages/cli/bin/router.mjs search "проверь код" --json
-node packages/cli/bin/router.mjs search "refactor" --limit 3 --explain
+
+# Explain the scoring
+node packages/cli/bin/router.mjs search "refactor this module" --explain
+
+# Budget-constrained
+node packages/cli/bin/router.mjs search "review my code" --budget-usd 0.01
+
+# Local models only (offline, free)
+node packages/cli/bin/router.mjs search "refactor" --local-only
+
+# Pure lexical (fast, no model download)
+node packages/cli/bin/router.mjs search "run tests" --no-semantic
 ```
 
-### Validate SKILL.md files
+### Other commands
 
 ```bash
+# List all installed skills
+node packages/cli/bin/router.mjs list
+
+# Show full metadata for one skill
+node packages/cli/bin/router.mjs show autopilot
+
+# Validate SKILL.md files
 node packages/cli/bin/router.mjs validate
-```
 
-Checks frontmatter, required fields, name format, SemVer.
-
-### Run tests
-
-```bash
+# Run tests
 npm test
 ```
 
 ---
 
-## SKILL-MANIFEST (v0.2)
+## SKILL-MANIFEST (v0.3.1)
 
 Optional. Routers **must** work without it, using plain `SKILL.md` as fallback.
-Adding a manifest raises routing precision; it is not a lock-in.
 
 ```yaml
 ---
 name: code-review
 version: 1.3.0
 description: "Check code quality and flag common mistakes."
+argument_hint: "<files-or-diff>"
 intents:
   - "проверить качество кода"
   - "code quality check"
-  - "review my changes"
 
 complexity: low
 estimated_tokens: 8000
@@ -146,15 +169,21 @@ safety_profile:
   local_models_trusted: true
   max_autonomous_steps: 10
 
-execution_mode: sequential
+gates:
+  pre: [dependencies_installed, git_clean]
+  post: [tests_pass, no_secrets_in_diff]
+  blind_acceptance: true
 
-constraints:
-  max_cost_per_call_usd: 0.02
+secrets_policy:
+  never_request: true
+  redact_at_ingest: true
+  allowed_env_vars: [OPENAI_API_KEY]
+
+execution_mode: sequential
 ---
 ```
 
 Full schema: [`spec/SKILL-MANIFEST.md`](./spec/SKILL-MANIFEST.md).
-Providers matrix: [`spec/PROVIDERS.md`](./spec/PROVIDERS.md).
 
 ---
 
@@ -181,7 +210,7 @@ Local runtimes use the OpenAI-compatible API, so they plug into the same code pa
                        │
 ┌──────────────────────▼──────────────────────────────────┐
 │  Indexer                                                │
-│  scanner → manifest → validator → embedding (ONNX)      │
+│  scanner → manifest → validator → redactor → embedder   │
 └──────────────────────┬──────────────────────────────────┘
                        │
 ┌──────────────────────▼──────────────────────────────────┐
@@ -191,19 +220,19 @@ Local runtimes use the OpenAI-compatible API, so they plug into the same code pa
                        │
 ┌──────────────────────▼──────────────────────────────────┐
 │  Ranker                                                 │
-│  relevance + prerequisites + cost − penalties           │
-│  → model_plan (which provider, which tier, why)         │
+│  relevance + prerequisites − penalties                  │
+│  + model_plan (provider, tier, cost, availability)      │
 └──────────────────────┬──────────────────────────────────┘
                        │
 ┌──────────────────────▼──────────────────────────────────┐
-│  Composer                                               │
+│  Gates                                                  │
+│  pre: dependencies_installed, git_clean                 │
+│  post: tests_pass, no_secrets_in_diff                   │
+└──────────────────────┬──────────────────────────────────┘
+                       │
+┌──────────────────────▼──────────────────────────────────┐
+│  Composer (planned)                                     │
 │  DAG of skills (sequential | async | hybrid)            │
-│  + compaction-guard + safety-checker                    │
-└──────────────────────┬──────────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────────┐
-│  Feedback loop                                          │
-│  collector → weights update (local only)                │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -211,14 +240,17 @@ Local runtimes use the OpenAI-compatible API, so they plug into the same code pa
 
 ## Status
 
-**Phase 1 — Core MVP — done.**
+**Phase 2.5 — Cost-aware + lazy loading — done.**
+**Phase 2.6 — Gates + secrets policy — done.**
 
 | Phase | What | Status |
 | :--- | :--- | :--- |
-| 0. Spec | SKILL-MANIFEST, ROUTER-PROTOCOL, PROVIDERS | ✅ v0.2 |
+| 0. Spec | SKILL-MANIFEST, ROUTER-PROTOCOL, PROVIDERS | ✅ v0.3.1 |
 | 1. Core MVP | Indexer, lexical search, CLI, tests | ✅ |
-| 2. Cost-aware | Model selector wired into routing | ⏳ next |
-| 3. Feedback loop | Learn from user's actual choices | ⏳ |
+| 2. Semantic | ONNX MiniLM + RRF hybrid | ✅ |
+| 2.5. Cost-aware | Model selector, budget flags, local-first | ✅ |
+| 2.6. Safety | Secret redaction, gates framework | ✅ |
+| 3. Feedback loop | Learn from user's actual choices | ⏳ next |
 | 4. Composer | DAG planner + synthesizer | ⏳ |
 | 5. Telemetry + UI | Spans, metrics, dashboard | ⏳ |
 | 6. Ecosystem | MCP server, adapters to competitors | ⏳ |
@@ -227,22 +259,28 @@ Local runtimes use the OpenAI-compatible API, so they plug into the same code pa
 
 ## Design principles
 
-1. **Standard over implementation.** The manifest is published under CC-BY-4.0 and any router may adopt it.
-2. **Every decision is explainable.** Users always see *why* — what matched, what penalized, what the cost is.
-3. **The system learns.** Ignoring a recommendation is a signal, not a loss.
+1. **Standard over implementation.** The manifest is published under CC-BY-4.0.
+2. **Every decision is explainable.** `--explain` shows why.
+3. **Secrets never leave your machine.** Redaction at ingest.
 4. **Local-first.** Nothing leaves the machine unless you opt in.
-5. **Forward-compatible.** Unknown manifest fields are ignored, not rejected.
+5. **No lock-in.** SKILL.md works without any manifest.
 
 ---
 
 ## Privacy
 
 - **Local embeddings** via ONNX MiniLM. No network calls by default.
-- **Feedback data** stored in `~/.claude/skill-router/` — never transmitted.
+- **Secret redaction** at ingest — before any file write.
 - **No telemetry.** Metrics exist only for you.
-- Opt-in remote embeddings: `--allow-remote-embeddings`.
+- Details: [`docs/privacy.md`](./docs/privacy.md).
 
-Details: [`docs/privacy.md`](./docs/privacy.md).
+---
+
+## Analysis and design docs
+
+- [`docs/analysis/autopilot-patterns.md`](./docs/analysis/autopilot-patterns.md) — 5 architectural patterns extracted from a reference skill
+- [`docs/analysis/autopilot-deep-dive.md`](./docs/analysis/autopilot-deep-dive.md) — detailed analysis
+- [`docs/analysis/nick-vels-skills.md`](./docs/analysis/nick-vels-skills.md) — initial scan
 
 ---
 
@@ -250,14 +288,12 @@ Details: [`docs/privacy.md`](./docs/privacy.md).
 
 All discussions happen in [GitHub Discussions](https://github.com/Alpha-Oi/next-skill-router/discussions):
 
-- **#1 — [RFC] SKILL-MANIFEST v0.2** — shape the standard.
-- **#2 — Roadmap & priorities** — what should Phase 2 focus on?
+- **#1 — [RFC] SKILL-MANIFEST** — shape the standard.
+- **#2 — Roadmap & priorities** — what should Phase 3 focus on?
 - **#3 — Call for contributors** — mentors, local-model folks, TS devs.
 - **#4 — [RFC] Multi-provider & local-first architecture** — provider selection logic.
 
 Before sending a PR, read [`CONTRIBUTING.md`](./CONTRIBUTING.md).
-
-For spec changes: open an RFC issue with the `spec` label. 7-day public comment period.
 
 ---
 

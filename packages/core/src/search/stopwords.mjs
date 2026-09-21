@@ -32,7 +32,7 @@ export function stripStopwords(text) {
   if (!text) return '';
   return text
     .split(/\s+/)
-    .map((w) => w.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, ''))
+    .map((w) => w.replace(/^[^\p{L}\p{N}\[\]()_:-]+|[^\p{L}\p{N}\[\]()_:-]+$/gu, ''))
     .filter((w) => w.length > 0 && !STOPWORDS.has(w.toLowerCase()))
     .join(' ');
 }
