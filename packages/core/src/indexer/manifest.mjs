@@ -83,6 +83,7 @@ export async function parseManifest(skillDir, skillMd) {
     safety_profile: merged.safety_profile ?? {},
     execution_mode: merged.execution_mode ?? 'sequential',
     constraints: merged.constraints ?? {},
+    argument_hint: merged.argument_hint ?? null,
     dir: skillDir,
     source
   };

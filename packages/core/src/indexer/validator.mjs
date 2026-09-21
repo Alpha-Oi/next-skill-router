@@ -65,6 +65,10 @@ export async function validateSkill(skillDir) {
     warnings.push('Description longer than 500 chars');
   }
 
+  if (fm.argument_hint !== undefined && typeof fm.argument_hint !== 'string') {
+    errors.push('argument_hint must be a string, got ' + typeof fm.argument_hint);
+  }
+
   return { ok: errors.length === 0, errors, warnings, frontmatter: fm };
 }
 

@@ -41,6 +41,36 @@ describe('parseManifest', () => {
     expect(skill.source).toBe('frontmatter');
   });
 
+
+  it('parses argument_hint', async () => {
+    const dir = join(tmp, 'with-hint');
+    await mkdir(dir, { recursive: true });
+    const md = [
+      '---',
+      'name: hinted',
+      'version: 1.0.0',
+      'description: Skill with hint',
+      'argument_hint: "[full|semi] <task>"',
+      '---',
+      '',
+      '# Hinted',
+      ''
+    ].join('\n');
+    await writeFile(join(dir, 'SKILL.md'), md, 'utf8');
+
+    const skill = await parseManifest(dir, md);
+    expect(skill.argument_hint).toBe('[full|semi] <task>');
+  });
+
+  it('returns null argument_hint when absent', async () => {
+    const dir = join(tmp, 'no-hint');
+    await mkdir(dir, { recursive: true });
+    const md = '---\nname: plain\nversion: 1.0.0\ndescription: No hint\n---\n\n# Plain\n';
+    await writeFile(join(dir, 'SKILL.md'), md, 'utf8');
+    const skill = await parseManifest(dir, md);
+    expect(skill.argument_hint).toBeNull();
+  });
+
   it('falls back when no frontmatter', async () => {
     const dir = join(tmp, 'nofm');
     await mkdir(dir, { recursive: true });

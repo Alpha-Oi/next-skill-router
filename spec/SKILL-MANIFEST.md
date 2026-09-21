@@ -1,7 +1,8 @@
-# SKILL-MANIFEST v0.2 (Draft RFC)
+# SKILL-MANIFEST v0.3 (Draft RFC)
 
 **Status:** Draft · Discussion: [GitHub Discussions](https://github.com/Alpha-Oi/next-skill-router/discussions)
 **Changes in v0.2:** added `model_affinity`, `safety_profile`, `execution_mode`, `constraints`.
+**Changes in v0.3:** added `argument_hint`.
 
 An optional metadata file placed next to `SKILL.md`. A router **must** work without it
 (falling back to plain `SKILL.md`). Its presence raises routing precision; it is not
@@ -26,6 +27,7 @@ a lock-in.
 | conflicts_with | string[] | no |
 | never_auto_invoke | boolean | no |
 | language | string[] | no |
+| argument_hint | string | no |
 
 ---
 
@@ -97,6 +99,32 @@ Rationale: GPT-5.6 Sol exhibits **12.6% reward hacking**. GPT-6 Astra showed
 self-generated prompt injection via compaction summaries. Claude Fable 5 is
 "relentlessly proactive" and may act without explicit request. These are documented
 incidents, not hypotheticals.
+
+---
+
+## 3.5. argument_hint (new in v0.3)
+
+Короткая подсказка о том, как передавать аргументы в навык. Используется
+CLI и чат-интерфейсом для показа синтаксиса при вызове.
+
+```yaml
+argument_hint: "[full|semi|interview|manual] [strict|deep] [polish] what to build"
+```
+
+| Поле | Назначение |
+| :--- | :--- |
+| argument_hint | Строка с описанием аргументов (необязательно) |
+
+**Зачем:** без этого поля пользователь не знает, что навык принимает флаги.
+С полем CLI может показать:
+
+```
+$ next-skill-router run autopilot --help
+autopilot — build an app end-to-end from a brief
+Usage: /autopilot [full|semi|interview|manual] [strict|deep] [polish] <task>
+```
+
+Заимствовано из `nick-vels/skills` (анализ: `docs/analysis/nick-vels-skills.md`).
 
 ---
 
@@ -182,7 +210,8 @@ When `skill.manifest.yaml` is absent, the router:
 2. Extracts `name` from the first `# Heading`.
 3. Uses the first paragraph as `description`.
 4. Sets `intents = [name, description]`.
-5. Defaults everything else.
+5. Sets `argument_hint = null` (optional).
+6. Defaults everything else.
 6. Routes via the `cloud_budget` tier.
 
 ---
@@ -191,7 +220,7 @@ When `skill.manifest.yaml` is absent, the router:
 
 - v0.1 — base fields, fallback.
 - **v0.2 — model_affinity, safety_profile, execution_mode, constraints.**
-- v0.3 — multilingual intents, `output_schema`.
+- **v0.3 — argument_hint, multilingual intents, output_schema.**
 - v1.0 — freeze after 3+ external implementations.
 
 ---
