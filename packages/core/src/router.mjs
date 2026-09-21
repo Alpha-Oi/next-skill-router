@@ -9,6 +9,7 @@ import { stripStopwords } from './search/stopwords.mjs';
 import { selectModel } from './ranker/model-selector.mjs';
 import { redact } from './secrets/redactor.mjs';
 import { runGates } from './gates/checker.mjs';
+import { loadWeights } from '../../../learner/src/weights.mjs';
 
 const SCORE_SCALE = 1000;
 const PREREQ_PENALTY = 30;
@@ -39,6 +40,9 @@ export async function route(query, opts = {}) {
 
   const skills = await loadSkills(projectDir);
   if (skills.length === 0) return { query: safeQuery, total_skills: 0, candidates: [], mode: 'lexical', redacted: redactedCount };
+
+  // Веса из feedback loop (по умолчанию все = 1.0)
+  const learnedWeights = await loadWeights();
 
   const cleanedQuery = stripStopwords(safeQuery) || safeQuery;
   const lexicalIndex = buildLexicalIndex(skills);
@@ -78,7 +82,8 @@ export async function route(query, opts = {}) {
     const penalties = [];
 
     const baseScore = mode === 'hybrid' ? f.score * SCORE_SCALE : f.score;
-    let score = baseScore;
+    const learnedWeight = learnedWeights[f.name] ?? 1.0;
+    let score = baseScore * learnedWeight;
 
     if (!prereqs.met) {
       score -= PREREQ_PENALTY;
@@ -120,6 +125,7 @@ export async function route(query, opts = {}) {
       reason: mode === 'hybrid' ? 'hybrid (lexical + semantic)' : 'lexical match',
       breakdown: {
         base: round(baseScore, 1),
+        learned_weight: round(learnedWeight, 3),
         lexical: round(lexByName.get(f.name) || 0, 1),
         semantic: round(semByName.get(f.name) || 0, 3),
         matched_terms: lexTermsByName.get(f.name) || [],
