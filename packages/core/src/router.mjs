@@ -6,6 +6,7 @@ import { buildLexicalIndex, lexicalSearch } from './search/lexical.mjs';
 import { buildSemanticIndex, semanticSearch } from './search/semantic.mjs';
 import { hybridRank } from './search/hybrid.mjs';
 import { stripStopwords } from './search/stopwords.mjs';
+import { selectModel } from './ranker/model-selector.mjs';
 
 const SCORE_SCALE = 1000;
 const PREREQ_PENALTY = 30;
@@ -23,6 +24,13 @@ export async function route(query, opts = {}) {
   const projectDir = opts.projectDir ?? process.cwd();
   const limit = opts.limit ?? 5;
   const useSemantic = opts.semantic !== false;
+  const withModelPlan = opts.modelPlan !== false;
+
+  const policy = {
+    max_cost_usd: opts.maxCostUsd,
+    max_tokens: opts.maxTokens,
+    local_only: opts.localOnly
+  };
 
   const skills = await loadSkills(projectDir);
   if (skills.length === 0) return { query, total_skills: 0, candidates: [], mode: 'lexical' };
@@ -57,13 +65,13 @@ export async function route(query, opts = {}) {
   const lexTermsByName = new Map(lexRanked.map((r) => [r.name, r.terms || []]));
   const semByName = new Map(semRanked.map((r) => [r.name, r.score]));
 
-  const candidates = fused.slice(0, limit * 2).map((f) => {
+  // ─── Обработка кандидатов ───────────────────────────────────────
+  const candidates = [];
+  for (const f of fused.slice(0, limit * 2)) {
     const skill = byName.get(f.name);
     const prereqs = checkPrereqs(skill, projectDir);
     const penalties = [];
 
-    // RRF даёт крохотные числа (~0.016–0.033). Умножаем на 1000 → 16–33.
-    // Для lexical-only режима score уже в нормальном диапазоне (см. выше).
     const baseScore = mode === 'hybrid' ? f.score * SCORE_SCALE : f.score;
     let score = baseScore;
 
@@ -76,7 +84,32 @@ export async function route(query, opts = {}) {
       penalties.push({ reason: 'never_auto_invoke', value: -NEVER_INVOKE_PENALTY });
     }
 
-    return {
+    // ─── Model plan ──────────────────────────────────────────────
+    let modelPlan = null;
+    if (withModelPlan) {
+      try {
+        const sel = await selectModel(skill, policy);
+        if (sel) {
+          modelPlan = {
+            tier: sel.model.tier,
+            model: sel.model.id,
+            provider: sel.model.provider,
+            reason: sel.reason,
+            estimated_cost_usd: round(sel.estimated_cost_usd, 6),
+            offline: sel.model.capabilities?.offline || false
+          };
+        } else if (policy.max_cost_usd || policy.local_only || policy.max_tokens) {
+          // Все модели вне бюджета → штрафуем и помечаем
+          score -= PREREQ_PENALTY;
+          penalties.push({ reason: 'no model fits budget', value: -PREREQ_PENALTY });
+          modelPlan = { error: 'no_model_fits_budget' };
+        }
+      } catch (e) {
+        // model selector не критичен, работаем без него
+      }
+    }
+
+    candidates.push({
       name: skill.name,
       score: round(score, 1),
       reason: mode === 'hybrid' ? 'hybrid (lexical + semantic)' : 'lexical match',
@@ -90,12 +123,13 @@ export async function route(query, opts = {}) {
       complexity: skill.complexity,
       cost_tier: skill.cost_tier,
       estimated_tokens: skill.estimated_tokens,
+      model_plan: modelPlan,
       prerequisites_met: prereqs.met,
       prerequisites_missing: prereqs.missing,
       never_auto_invoke: skill.never_auto_invoke,
       source: skill.source
-    };
-  });
+    });
+  }
 
   candidates.sort((a, b) => b.score - a.score);
 
@@ -104,6 +138,7 @@ export async function route(query, opts = {}) {
     cleaned_query: cleanedQuery !== query ? cleanedQuery : undefined,
     total_skills: skills.length,
     mode,
+    policy: (policy.max_cost_usd || policy.max_tokens || policy.local_only) ? policy : undefined,
     candidates: candidates.slice(0, limit)
   };
 }
