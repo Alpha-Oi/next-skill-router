@@ -120,4 +120,49 @@ program
     if (errs > 0) process.exit(1);
   });
 
+
+program
+  .command('show <name>')
+  .description('Show full metadata for a skill (including argument_hint)')
+  .option('--json', 'output as JSON')
+  .action(async (name, opts) => {
+    const skills = await loadSkills();
+    const skill = skills.find((s) => s.name === name);
+    if (!skill) {
+      console.error('Skill not found: ' + name);
+      process.exit(1);
+    }
+
+    if (opts.json) {
+      console.log(JSON.stringify(skill, null, 2));
+      return;
+    }
+
+    console.log('');
+    console.log(skill.name + (skill.version && skill.version !== '0.0.0' ? ' v' + skill.version : ''));
+    console.log('-'.repeat(40));
+    console.log('Description:    ' + (skill.description || '(none)'));
+    if (skill.argument_hint) {
+      console.log('Argument hint:  ' + skill.argument_hint);
+    }
+    console.log('Complexity:     ' + skill.complexity);
+    console.log('Cost tier:      ' + skill.cost_tier);
+    console.log('Est. tokens:    ~' + skill.estimated_tokens);
+    console.log('Source:         ' + skill.source);
+    if (skill.intents && skill.intents.length > 0) {
+      console.log('Intents:');
+      for (const i of skill.intents) console.log('  - ' + i);
+    }
+    if (skill.language && skill.language.length > 0) {
+      console.log('Language:       ' + skill.language.join(', '));
+    }
+    if (skill.composable_with && skill.composable_with.length > 0) {
+      console.log('Composable with: ' + skill.composable_with.join(', '));
+    }
+    if (skill.never_auto_invoke) {
+      console.log('Never auto-invoke: true');
+    }
+    console.log('');
+  });
+
 program.parse();
