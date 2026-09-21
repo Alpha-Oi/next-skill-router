@@ -4,6 +4,9 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { route, loadSkills } from '../../core/src/router.mjs';
 import { validateAll } from '../../core/src/indexer/validator.mjs';
+import { record, stats as getStats, weights as getWeights, resetWeights } from '../../../learner/src/collector.mjs';
+import { getFeedbackPath } from '../../../learner/src/storage.mjs';
+import { getWeightsPath } from '../../../learner/src/weights.mjs';
 
 const program = new Command();
 program
@@ -61,6 +64,9 @@ program
         console.log('           Lexical:       ' + c.breakdown.lexical.toFixed(1));
         console.log('           Semantic:      ' + c.breakdown.semantic.toFixed(3));
         console.log('           Fused (base):  ' + c.breakdown.base.toFixed(1));
+        if (c.breakdown.learned_weight && c.breakdown.learned_weight !== 1) {
+          console.log('           Learned weight: ' + c.breakdown.learned_weight.toFixed(3));
+        }
         console.log('           Prerequisites: ' + (c.prerequisites_met ? 'OK' : 'MISSING: ' + c.prerequisites_missing.join(', ')));
         console.log('           Auto-invoke:   ' + (c.never_auto_invoke ? 'BLOCKED' : 'allowed'));
         if (c.breakdown.penalties.length > 0) {
@@ -174,6 +180,105 @@ program
     console.log('Total: ' + results.length + ' skills, ' + errs + ' errors, ' + warns + ' warnings');
     console.log('');
     if (errs > 0) process.exit(1);
+  });
+
+
+program
+  .command('feedback')
+  .description('Record a choice (feedback loop)')
+  .requiredOption('--chosen <name>', 'skill that was actually chosen')
+  .option('--query <text>', 'original query')
+  .option('--recommended <list>', 'comma-separated recommended skills')
+  .option('--outcome <type>', 'accept | reject | replace', 'accept')
+  .option('--note <text>', 'optional note')
+  .action(async (opts) => {
+    const saved = await record({
+      query: opts.query || '',
+      recommended: (opts.recommended || '').split(',').map((s) => s.trim()).filter(Boolean),
+      chosen: opts.chosen,
+      outcome: opts.outcome,
+      note: opts.note
+    });
+    console.log('Recorded: ' + saved.chosen + ' [' + saved.outcome + ']');
+  });
+
+program
+  .command('stats')
+  .description('Show feedback statistics')
+  .option('--period <days>', 'window in days (default: all-time)', '0')
+  .option('--json', 'output as JSON')
+  .action(async (opts) => {
+    const days = parseInt(opts.period, 10) || 0;
+    const result = await getStats(days > 0 ? { sinceMs: days * 86400000 } : {});
+
+    if (opts.json) { console.log(JSON.stringify(result, null, 2)); return; }
+
+    console.log('');
+    console.log('Feedback stats (window: ' + result.window + ')');
+    console.log('-'.repeat(40));
+    console.log('Total events:      ' + result.total);
+    console.log('Accepted:          ' + result.accepted);
+    console.log('Rejected:          ' + result.rejected);
+    console.log('Replaced:          ' + result.replaced);
+    console.log('Precision@1:       ' + (result.precision_at_1 * 100).toFixed(1) + '%');
+    console.log('');
+    console.log('Rank distribution of chosen skill:');
+    console.log('  top-1:   ' + result.rank_distribution[1]);
+    console.log('  top-2:   ' + result.rank_distribution[2]);
+    console.log('  top-3+:  ' + result.rank_distribution['3+']);
+    if (result.top_skills.length > 0) {
+      console.log('');
+      console.log('Top chosen skills:');
+      for (const s of result.top_skills) console.log('  ' + String(s.count).padStart(4) + '  ' + s.name);
+    }
+    console.log('');
+  });
+
+program
+  .command('weights')
+  .description('Show learned weights')
+  .option('--json', 'output as JSON')
+  .action(async (opts) => {
+    const w = await getWeights();
+    if (opts.json) { console.log(JSON.stringify(w, null, 2)); return; }
+
+    const entries = Object.entries(w).sort((a, b) => b[1] - a[1]);
+    console.log('');
+    if (entries.length === 0) {
+      console.log('No weights yet. Use "feedback" command to teach the router.');
+    } else {
+      console.log('Learned weights (' + entries.length + '):');
+      for (const [name, weight] of entries) {
+        const bar = weight >= 1.0
+          ? '+'.repeat(Math.round((weight - 1.0) * 20))
+          : '-'.repeat(Math.round((1.0 - weight) * 20));
+        console.log('  ' + weight.toFixed(3) + '  ' + bar.padEnd(20) + '  ' + name);
+      }
+    }
+    console.log('');
+  });
+
+program
+  .command('reset-weights')
+  .description('Reset all learned weights (does not delete feedback history)')
+  .option('--yes', 'skip confirmation')
+  .action(async (opts) => {
+    if (!opts.yes) {
+      console.log('Use --yes to confirm reset.');
+      return;
+    }
+    await resetWeights();
+    console.log('Weights reset.');
+  });
+
+program
+  .command('info')
+  .description('Show paths to local data files')
+  .action(async () => {
+    console.log('');
+    console.log('Feedback:  ' + getFeedbackPath());
+    console.log('Weights:   ' + getWeightsPath());
+    console.log('');
   });
 
 program.parse();
