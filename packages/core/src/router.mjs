@@ -7,6 +7,8 @@ import { buildSemanticIndex, semanticSearch } from './search/semantic.mjs';
 import { hybridRank } from './search/hybrid.mjs';
 import { stripStopwords } from './search/stopwords.mjs';
 import { selectModel } from './ranker/model-selector.mjs';
+import { redact } from './secrets/redactor.mjs';
+import { runGates } from './gates/checker.mjs';
 
 const SCORE_SCALE = 1000;
 const PREREQ_PENALTY = 30;
@@ -32,10 +34,13 @@ export async function route(query, opts = {}) {
     local_only: opts.localOnly
   };
 
-  const skills = await loadSkills(projectDir);
-  if (skills.length === 0) return { query, total_skills: 0, candidates: [], mode: 'lexical' };
+  // Редакция запроса ДО любой обработки — секреты не попадут в кеш
+  const { text: safeQuery, redacted: redactedCount } = redact(query);
 
-  const cleanedQuery = stripStopwords(query) || query;
+  const skills = await loadSkills(projectDir);
+  if (skills.length === 0) return { query: safeQuery, total_skills: 0, candidates: [], mode: 'lexical', redacted: redactedCount };
+
+  const cleanedQuery = stripStopwords(safeQuery) || safeQuery;
   const lexicalIndex = buildLexicalIndex(skills);
   const lexResults = lexicalSearch(lexicalIndex, cleanedQuery, limit * 3);
   const lexRanked = lexResults.map((r) => ({
@@ -49,7 +54,7 @@ export async function route(query, opts = {}) {
   if (useSemantic) {
     try {
       const semIndex = await buildSemanticIndex(skills);
-      semRanked = await semanticSearch(query, semIndex);
+      semRanked = await semanticSearch(safeQuery, semIndex);
       mode = 'hybrid';
     } catch (e) {
       console.warn('  semantic failed: ' + e.message + ' — falling back to lexical');
@@ -133,12 +138,18 @@ export async function route(query, opts = {}) {
 
   candidates.sort((a, b) => b.score - a.score);
 
+  // Gates
+  const gatesToCheck = opts.gates || [];
+  const gateResult = gatesToCheck.length > 0 ? runGates(gatesToCheck, { projectDir }) : null;
+
   return {
-    query,
-    cleaned_query: cleanedQuery !== query ? cleanedQuery : undefined,
+    query: safeQuery,
+    cleaned_query: cleanedQuery !== safeQuery ? cleanedQuery : undefined,
+    redacted: redactedCount > 0 ? redactedCount : undefined,
     total_skills: skills.length,
     mode,
     policy: (policy.max_cost_usd || policy.max_tokens || policy.local_only) ? policy : undefined,
+    gates: gateResult,
     candidates: candidates.slice(0, limit)
   };
 }
