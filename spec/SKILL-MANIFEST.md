@@ -1,8 +1,9 @@
-# SKILL-MANIFEST v0.3 (Draft RFC)
+# SKILL-MANIFEST v0.3.1 (Draft RFC)
 
 **Status:** Draft · Discussion: [GitHub Discussions](https://github.com/Alpha-Oi/next-skill-router/discussions)
 **Changes in v0.2:** added `model_affinity`, `safety_profile`, `execution_mode`, `constraints`.
 **Changes in v0.3:** added `argument_hint`.
+**Changes in v0.3.1:** added `gates` and `secrets_policy`.
 
 An optional metadata file placed next to `SKILL.md`. A router **must** work without it
 (falling back to plain `SKILL.md`). Its presence raises routing precision; it is not
@@ -28,6 +29,8 @@ a lock-in.
 | never_auto_invoke | boolean | no |
 | language | string[] | no |
 | argument_hint | string | no |
+| gates | object | no |
+| secrets_policy | object | no |
 
 ---
 
@@ -128,6 +131,67 @@ Usage: /autopilot [full|semi|interview|manual] [strict|deep] [polish] <task>
 
 ---
 
+## 3.6. gates (new in v0.3.1)
+
+Формальные проверки до/после запуска навыка. Заменяют «мягкие рекомендации»
+на жёсткие чек-поинты — в духе подхода autopilot (см.
+[autopilot-patterns.md](../docs/analysis/autopilot-patterns.md)).
+
+```yaml
+gates:
+  pre:
+    - dependencies_installed
+    - git_clean
+  post:
+    - tests_pass
+    - no_secrets_in_diff
+  blind_acceptance: true
+```
+
+| Поле | Назначение |
+| :--- | :--- |
+| `pre` | Проверки до запуска; при провале — навык не запускается |
+| `post` | Проверки после запуска; при провале — событие `safety_event` |
+| `blind_acceptance` | Проверять результат против изначального запроса пользователя |
+
+Проверки **декларативны** — их исполняет хост (Claude Code, Codex, CLI).
+Встроенный набор гейтов:
+
+| Gate | Что проверяет |
+| :--- | :--- |
+| `dependencies_installed` | `prerequisites.files` и `prerequisites.tools` выполнены |
+| `git_clean` | `git status` чист или только ожидаемые изменения |
+| `tests_pass` | Тесты проекта проходят |
+| `no_secrets_in_diff` | В изменениях нет секретов |
+
+---
+
+## 3.7. secrets_policy (new in v0.3.1)
+
+Правила обращения с секретами. Заменяют флаг на **процедуру** — в духе
+autopilot (см. `docs/analysis/autopilot-patterns.md`, паттерн 3).
+
+```yaml
+secrets_policy:
+  never_request: true
+  redact_at_ingest: true
+  allowed_env_vars: [STRIPE_KEY, OPENAI_API_KEY, GITHUB_TOKEN]
+  rotate_on_leak: true
+```
+
+| Поле | По умолчанию | Назначение |
+| :--- | :---: | :--- |
+| `never_request` | true | Навык никогда не запрашивает credentials |
+| `redact_at_ingest` | true | Редакция до записи в файл/лог/кеш |
+| `allowed_env_vars` | [] | Белый список имён переменных окружения |
+| `rotate_on_leak` | true | Требовать ротации при утечке |
+
+Роутер **обязан** выполнять `redact_at_ingest` для любого текста, попадающего
+в `feedback.jsonl`, `embeddings.json` или телеметрию. Найденный секрет
+заменяется на `[REDACTED:VAR_NAME]`.
+
+---
+
 ## 4. execution_mode (new in v0.2)
 
 ```yaml
@@ -220,7 +284,8 @@ When `skill.manifest.yaml` is absent, the router:
 
 - v0.1 — base fields, fallback.
 - **v0.2 — model_affinity, safety_profile, execution_mode, constraints.**
-- **v0.3 — argument_hint, multilingual intents, output_schema.**
+- v0.3 — argument_hint, multilingual intents, output_schema.
+- **v0.3.1 — gates, secrets_policy.**
 - v1.0 — freeze after 3+ external implementations.
 
 ---
