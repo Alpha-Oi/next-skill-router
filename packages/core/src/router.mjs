@@ -9,7 +9,7 @@ import { stripStopwords } from './search/stopwords.mjs';
 import { selectModel } from './ranker/model-selector.mjs';
 import { redact } from './secrets/redactor.mjs';
 import { runGates } from './gates/checker.mjs';
-import { loadWeights } from '../../../learner/src/weights.mjs';
+import { loadWeights } from '../../learner/src/weights.mjs';
 
 const SCORE_SCALE = 1000;
 const PREREQ_PENALTY = 30;
