@@ -41,6 +41,18 @@ function extractFirstParagraph(body) {
   return '';
 }
 
+
+function normalizeKeys(obj) {
+  if (!obj || typeof obj !== 'object') return obj;
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    // kebab-case → snake_case
+    const normalized = k.replace(/-/g, '_');
+    out[normalized] = v;
+  }
+  return out;
+}
+
 export async function parseManifest(skillDir, skillMd) {
   const dirName = basename(skillDir);
   let manifest = null;
@@ -58,7 +70,8 @@ export async function parseManifest(skillDir, skillMd) {
     }
   }
 
-  const { data: fm, body } = extractFrontmatter(skillMd);
+  const { data: rawFm, body } = extractFrontmatter(skillMd);
+  const fm = normalizeKeys(rawFm);
   const merged = { ...fm, ...(manifest || {}) };
   const hasFm = Object.keys(fm).length > 0;
   const source = manifest ? 'manifest' : hasFm ? 'frontmatter' : 'fallback';
