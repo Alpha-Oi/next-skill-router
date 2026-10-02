@@ -10,6 +10,8 @@ import { selectModel } from './ranker/model-selector.mjs';
 import { redact } from './secrets/redactor.mjs';
 import { runGates } from './gates/checker.mjs';
 import { loadWeights } from '../../learner/src/weights.mjs';
+import { createSpan } from '../../telemetry/src/tracer.mjs';
+import { recordSpan } from '../../telemetry/src/storage.mjs';
 
 const SCORE_SCALE = 1000;
 const PREREQ_PENALTY = 30;
@@ -28,6 +30,8 @@ export async function route(query, opts = {}) {
   const limit = opts.limit ?? 5;
   const useSemantic = opts.semantic !== false;
   const withModelPlan = opts.modelPlan !== false;
+  const shouldTrace = opts.trace === true || process.env.NSR_TELEMETRY === '1';
+  const startedAt = Date.now();
 
   const policy = {
     max_cost_usd: opts.maxCostUsd,
@@ -148,7 +152,8 @@ export async function route(query, opts = {}) {
   const gatesToCheck = opts.gates || [];
   const gateResult = gatesToCheck.length > 0 ? runGates(gatesToCheck, { projectDir }) : null;
 
-  return {
+  const latencyMs = Date.now() - startedAt;
+  const finalResult = {
     query: safeQuery,
     cleaned_query: cleanedQuery !== safeQuery ? cleanedQuery : undefined,
     redacted: redactedCount > 0 ? redactedCount : undefined,
@@ -158,6 +163,15 @@ export async function route(query, opts = {}) {
     gates: gateResult,
     candidates: candidates.slice(0, limit)
   };
+
+  if (shouldTrace) {
+    try {
+      const span = createSpan(safeQuery, finalResult, { latencyMs });
+      await recordSpan(span);
+    } catch {}
+  }
+
+  return finalResult;
 }
 
 function checkPrereqs(skill, projectDir) {
