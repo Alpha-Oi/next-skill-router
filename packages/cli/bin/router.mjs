@@ -9,9 +9,9 @@ import { validateAll } from '../../core/src/indexer/validator.mjs';
 import { record, stats as getStats, weights as getWeights, resetWeights } from '../../learner/src/collector.mjs';
 import { getFeedbackPath } from '../../learner/src/storage.mjs';
 import { getWeightsPath } from '../../learner/src/weights.mjs';
-import { readRecentSpans, getTelemetryDir } from '../../../telemetry/src/storage.mjs';
-import { computeMetrics } from '../../../telemetry/src/metrics.mjs';
-import { renderDashboard } from '../../../telemetry/src/dashboard.mjs';
+import { readRecentSpans, getTelemetryDir } from '../../telemetry/src/storage.mjs';
+import { computeMetrics } from '../../telemetry/src/metrics.mjs';
+import { renderDashboard } from '../../telemetry/src/dashboard.mjs';
 
 const program = new Command();
 program
@@ -373,3 +373,4 @@ program
   });
 
 program.parse();
+
