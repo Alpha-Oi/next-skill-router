@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+
+const D = String.fromCharCode(36);
 import { Command } from 'commander';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -7,6 +9,9 @@ import { validateAll } from '../../core/src/indexer/validator.mjs';
 import { record, stats as getStats, weights as getWeights, resetWeights } from '../../learner/src/collector.mjs';
 import { getFeedbackPath } from '../../learner/src/storage.mjs';
 import { getWeightsPath } from '../../learner/src/weights.mjs';
+import { readRecentSpans, getTelemetryDir } from '../../telemetry/src/storage.mjs';
+import { computeMetrics } from '../../telemetry/src/metrics.mjs';
+import { renderDashboard } from '../../telemetry/src/dashboard.mjs';
 
 const program = new Command();
 program
@@ -303,4 +308,69 @@ program
     process.exit(result.status ?? 0);
   });
 
+
+program
+  .command('telemetry')
+  .description('Show telemetry metrics or open dashboard')
+  .option('--period <days>', 'window in days (default: all-time)', '0')
+  .option('--json', 'output as JSON')
+  .option('--open', 'generate dashboard HTML and open in browser')
+  .action(async (opts) => {
+    const days = parseInt(opts.period, 10) || 0;
+    const spans = await readRecentSpans(days > 0 ? days * 86400000 : 0);
+    const metrics = computeMetrics(spans);
+
+    if (opts.open) {
+      const { writeFile, mkdir } = await import('node:fs/promises');
+      const { spawn } = await import('node:child_process');
+      const dir = getTelemetryDir();
+      await mkdir(dir, { recursive: true });
+      const htmlPath = dir + '/dashboard.html';
+      const html = await renderDashboard(metrics, spans);
+      await writeFile(htmlPath, html, 'utf8');
+      console.log('Dashboard: ' + htmlPath);
+      const cmd = process.platform === 'win32' ? 'start' : process.platform === 'darwin' ? 'open' : 'xdg-open';
+      try {
+        spawn(cmd, ['"' + htmlPath + '"'], { shell: true, detached: true });
+        console.log('Opening in browser...');
+      } catch {
+        console.log('Open manually: ' + htmlPath);
+      }
+      return;
+    }
+
+    if (opts.json) { console.log(JSON.stringify(metrics, null, 2)); return; }
+
+    console.log('');
+    console.log('Telemetry (period: ' + (days > 0 ? days + 'd' : 'all-time') + ')');
+    console.log('-'.repeat(40));
+    console.log('Total queries:  ' + metrics.total);
+    console.log('Avg latency:    ' + metrics.avg_latency_ms + ' ms');
+    console.log('Total cost:     ' + D + metrics.total_cost_usd.toFixed(4));
+    console.log('Total tokens:   ' + metrics.total_tokens);
+    console.log('Redactions:     ' + metrics.redacted_count);
+    if (metrics.date_range) {
+      console.log('Range:          ' + metrics.date_range.from.slice(0, 10) + ' -> ' + metrics.date_range.to.slice(0, 10));
+    }
+    if (metrics.top_skills.length > 0) {
+      console.log('');
+      console.log('Top skills:');
+      for (const s of metrics.top_skills) {
+        console.log('  ' + String(s.count).padStart(4) + '  ' + s.name);
+      }
+    }
+    if (Object.keys(metrics.by_model_tier).length > 0) {
+      console.log('');
+      console.log('Model tiers:');
+      for (const [tier, count] of Object.entries(metrics.by_model_tier).sort((a, b) => b[1] - a[1])) {
+        console.log('  ' + String(count).padStart(4) + '  ' + tier);
+      }
+    }
+    console.log('');
+    console.log('Data:  ' + getTelemetryDir());
+    console.log('Open dashboard:  node packages/cli/bin/router.mjs telemetry --open');
+    console.log('');
+  });
+
 program.parse();
+
