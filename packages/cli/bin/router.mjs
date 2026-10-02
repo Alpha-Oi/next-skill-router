@@ -1,9 +1,12 @@
 #!/usr/bin/env node
+
+const D = String.fromCharCode(36); // dollar sign, used in console.log
 import { Command } from 'commander';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { route, loadSkills } from '../../core/src/router.mjs';
 import { validateAll } from '../../core/src/indexer/validator.mjs';
+import { plan as buildPlan } from '../../core/src/composer/planner.mjs';
 import { record, stats as getStats, weights as getWeights, resetWeights } from '../../learner/src/collector.mjs';
 import { getFeedbackPath } from '../../learner/src/storage.mjs';
 import { getWeightsPath } from '../../learner/src/weights.mjs';
@@ -303,4 +306,80 @@ program
     process.exit(result.status ?? 0);
   });
 
+
+program
+  .command('compose <query>')
+  .description('Build a multi-step plan from a natural-language query')
+  .option('-l, --limit <n>', 'candidate limit', '5')
+  .option('--budget-usd <n>', 'max cost per step in USD')
+  .option('--local-only', 'use only local models')
+  .option('--json', 'output as JSON')
+  .action(async (query, opts) => {
+    const routeResult = await route(query, {
+      limit: parseInt(opts.limit, 10),
+      semantic: true,
+      maxCostUsd: opts.budgetUsd ? parseFloat(opts.budgetUsd) : undefined,
+      localOnly: !!opts.localOnly
+    });
+
+    const allSkills = await loadSkills();
+    const policy = {
+      max_cost_usd: opts.budgetUsd ? parseFloat(opts.budgetUsd) : undefined,
+      local_only: !!opts.localOnly
+    };
+
+    const result = await buildPlan({
+      query,
+      candidates: routeResult.candidates,
+      allSkills,
+      policy
+    });
+
+    if (opts.json) { console.log(JSON.stringify(result, null, 2)); return; }
+
+    console.log('');
+    console.log('Query: ' + query);
+    console.log('');
+
+    if (result.reason === 'no_candidates') {
+      console.log('  No matching skills found.');
+      console.log('');
+      return;
+    }
+
+    if (result.reason === 'conflicts_detected') {
+      console.log('  Conflicts detected:');
+      for (const c of result.conflicts) console.log('    - ' + c.reason);
+      console.log('');
+      return;
+    }
+
+    if (result.reason === 'cycle_detected') {
+      console.log('  Cycle detected in skill dependencies. Cannot plan.');
+      console.log('');
+      return;
+    }
+
+    console.log('Plan (' + result.plan.length + ' steps, sequential):');
+    console.log('');
+
+    for (const s of result.plan) {
+      const model = s.model_plan && !s.model_plan.error ? s.model_plan : null;
+      console.log('  ' + s.step + '. ' + s.skill);
+      console.log('     complexity: ' + s.complexity + ' | ~' + s.estimated_tokens + ' tokens');
+      if (model) {
+        console.log('     model: ' + model.model + ' (' + model.tier + ', ' + model.provider + ')');
+        console.log('     cost:  ' + D + model.estimated_cost_usd + (model.offline ? ' (offline)' : ''));
+      } else {
+        console.log('     model: NONE FITS BUDGET');
+      }
+      if (s.depends_on.length > 0) {
+        console.log('     after: ' + s.depends_on.join(', '));
+      }
+      console.log('');
+    }
+
+    console.log('Total: ' + result.total_tokens + ' tokens, ' + D + result.total_cost_usd);
+    console.log('');
+  });
 program.parse();
