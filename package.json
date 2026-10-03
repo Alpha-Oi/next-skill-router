@@ -1,7 +1,7 @@
 {
   "name": "next-skill-router",
-  "version": "0.1.0",
-  "description": "Universal skill router for Claude Code and Codex.",
+  "version": "1.0.0",
+  "description": "Cost-aware, local-first skill routing for AI agents. MCP server + CLI.",
   "license": "MIT",
   "type": "module",
   "bin": {
@@ -26,5 +26,39 @@
   },
   "engines": {
     "node": ">=20"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "claude-code",
+    "ai-agents",
+    "skills",
+    "llm",
+    "ollama",
+    "local-first",
+    "cost-aware"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Alpha-Oi/next-skill-router.git"
+  },
+  "homepage": "https://github.com/Alpha-Oi/next-skill-router#readme",
+  "bugs": {
+    "url": "https://github.com/Alpha-Oi/next-skill-router/issues"
+  },
+  "author": "Alpha-Oi",
+  "files": [
+    "packages/",
+    "integrations/",
+    "spec/",
+    "docs/architecture.md",
+    "docs/privacy.md",
+    "docs/adr/",
+    "README.md",
+    "LICENSE",
+    "CONTRIBUTING.md"
+  ],
+  "publishConfig": {
+    "access": "public"
   }
 }
