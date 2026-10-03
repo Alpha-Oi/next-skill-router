@@ -83,7 +83,26 @@ After stopword filter: "fix code [REDACTED:OPENAI_API_KEY]"
 
 ## Quick start
 
-### Option 1 — Local install (Node.js)
+### Option 1 — npx (no install)
+
+```bash
+npx next-skill-router search "review my API design" --explain
+npx next-skill-router list
+npx next-skill-router search "refactor" --local-only
+```
+
+**Requirements:** Node.js 20+. No clone, no build, no config.
+
+Published on npm: [`next-skill-router`](https://www.npmjs.com/package/next-skill-router)
+
+### Option 2 — Global install
+
+```bash
+npm install -g next-skill-router
+next-skill-router search "review my API design" --explain
+```
+
+### Option 3 — Local install (Node.js)
 
 ```bash
 git clone https://github.com/Alpha-Oi/next-skill-router
@@ -98,7 +117,7 @@ node packages/cli/bin/router.mjs search "review my API design" --explain
 
 **Optional:** [Ollama](https://ollama.com/) with `qwen3:7b` for local-first routing ($0, offline).
 
-### Option 2 — Docker
+### Option 4 — Docker
 
 ```bash
 docker run --rm -it -v "$HOME/.claude:/root/.claude" \
@@ -117,7 +136,7 @@ docker run --rm -it \
   search "refactor my code" --local-only
 ```
 
-### Option 3 — Docker Compose (with Ollama)
+### Option 5 — Docker Compose (with Ollama)
 
 ```bash
 docker compose up -d
