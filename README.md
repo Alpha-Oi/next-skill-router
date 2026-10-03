@@ -9,6 +9,10 @@
 [![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen)](https://nodejs.org)
 [![Spec](https://img.shields.io/badge/spec-SKILL--MANIFEST_v0.3.1-purple)](./spec/SKILL-MANIFEST.md)
 
+![Demo](./docs/demo.svg)
+
+_Real output: 141 skills indexed, hybrid search, cost-aware routing, secret redaction._
+
 ---
 
 ## Why this exists

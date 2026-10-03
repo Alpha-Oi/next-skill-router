@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="734" height="1422" viewBox="0 0 734 1422" font-family="'Cascadia Mono','Consolas','Monaco','Menlo',monospace" font-size="13">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e1e2e"/>
+      <stop offset="100%" stop-color="#181825"/>
+    </linearGradient>
+  </defs>
+  <rect width="734" height="1422" rx="10" fill="url(#bg)"/>
+  <circle cx="18" cy="18" r="6" fill="#ff5f56"/>
+  <circle cx="38" cy="18" r="6" fill="#ffbd2e"/>
+  <circle cx="58" cy="18" r="6" fill="#27c93f"/>
+  <text x="367" y="22" fill="#888" font-size="11" text-anchor="middle">next-skill-router</text>
+  <line x1="0" y1="34" x2="734" y2="34" stroke="#313244" stroke-width="1"/>
+  <text x="16" y="41" fill="#a6e3a1" font-weight="bold" xml:space="preserve">$ router list</text>
+  <text x="16" y="59" fill="#cdd6f4" font-weight="normal" xml:space="preserve">Found 141 skills:</text>
+  <text x="16" y="77" fill="#cdd6f4" font-weight="normal" xml:space="preserve"></text>
+  <text x="16" y="95" fill="#cdd6f4" font-weight="normal" xml:space="preserve">  ab-test-setup                [frontmatter]</text>
+  <text x="16" y="113" fill="#cdd6f4" font-weight="normal" xml:space="preserve">     When the user wants to plan, design, or implement an A/B test or experiment. Also us…</text>
+  <text x="16" y="131" fill="#cdd6f4" font-weight="normal" xml:space="preserve">  ad-creative                  [frontmatter]</text>
+  <text x="16" y="149" fill="#cdd6f4" font-weight="normal" xml:space="preserve">     When the user needs to generate, iterate, or scale ad creative for paid advertising.…</text>
+  <text x="16" y="167" fill="#cdd6f4" font-weight="normal" xml:space="preserve">  adversarial-reviewer         [frontmatter]</text>
+  <text x="16" y="185" fill="#cdd6f4" font-weight="normal" xml:space="preserve">     Adversarial code review that breaks the self-review monoculture. Use when you want a…</text>
+  <text x="16" y="203" fill="#cdd6f4" font-weight="normal" xml:space="preserve">  aeo                          [frontmatter]</text>
+  <text x="16" y="221" fill="#cdd6f4" font-weight="normal" xml:space="preserve">     Answer Engine Optimization (AEO) skill — optimize content to be cited by AI language…</text>
+  <text x="16" y="239" fill="#cdd6f4" font-weight="normal" xml:space="preserve">  agent-designer               [frontmatter]</text>
+  <text x="16" y="257" fill="#cdd6f4" font-weight="normal" xml:space="preserve">     Use when the user asks to design a multi-agent system, pick an orchestration pattern…</text>
+  <text x="16" y="293" fill="#a6e3a1" font-weight="bold" xml:space="preserve">$ router search &quot;review my API design&quot; --explain</text>
+  <text x="16" y="311" fill="#cdd6f4" font-weight="normal" xml:space="preserve">Query: review my API design</text>
+  <text x="16" y="329" fill="#cdd6f4" font-weight="normal" xml:space="preserve">After stopword filter: &quot;review API design&quot;</text>
+  <text x="16" y="347" fill="#cdd6f4" font-weight="normal" xml:space="preserve">Total skills: 141 | mode: hybrid</text>
+  <text x="16" y="365" fill="#cdd6f4" font-weight="normal" xml:space="preserve"></text>
+  <text x="16" y="383" fill="#cdd6f4" font-weight="normal" xml:space="preserve">    32.8  ####################  api-design-reviewer</text>
+  <text x="16" y="401" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Lexical:       157.8</text>
+  <text x="16" y="419" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Semantic:      0.753</text>
+  <text x="16" y="437" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Fused (base):  32.8</text>
+  <text x="16" y="455" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Prerequisites: OK</text>
+  <text x="16" y="473" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Auto-invoke:   allowed</text>
+  <text x="16" y="491" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           --------------------------------</text>
+  <text x="16" y="509" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Final:         32.8</text>
+  <text x="16" y="527" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Matched terms: review, reviewing, reviewer, api, apis, design</text>
+  <text x="16" y="545" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Source:        frontmatter</text>
+  <text x="16" y="563" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Model:         qwen3:7b (local, ollama)</text>
+  <text x="16" y="581" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Model reason:  cheapest in tier=local</text>
+  <text x="16" y="599" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Est. cost:     $0 (offline)</text>
+  <text x="16" y="617" fill="#cdd6f4" font-weight="normal" xml:space="preserve"></text>
+  <text x="16" y="635" fill="#cdd6f4" font-weight="normal" xml:space="preserve">    31.5  ###################  senior-backend</text>
+  <text x="16" y="653" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Lexical:       41.5</text>
+  <text x="16" y="671" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Semantic:      0.355</text>
+  <text x="16" y="689" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Fused (base):  31.5</text>
+  <text x="16" y="725" fill="#a6e3a1" font-weight="bold" xml:space="preserve">$ router search &quot;design a REST API&quot; --budget-usd 0.01 --explain</text>
+  <text x="16" y="743" fill="#cdd6f4" font-weight="normal" xml:space="preserve">Query: design a REST API</text>
+  <text x="16" y="761" fill="#cdd6f4" font-weight="normal" xml:space="preserve">After stopword filter: &quot;design REST API&quot;</text>
+  <text x="16" y="779" fill="#cdd6f4" font-weight="normal" xml:space="preserve">Total skills: 141 | mode: hybrid</text>
+  <text x="16" y="797" fill="#cdd6f4" font-weight="normal" xml:space="preserve">Policy: budget=$0.01</text>
+  <text x="16" y="815" fill="#cdd6f4" font-weight="normal" xml:space="preserve"></text>
+  <text x="16" y="833" fill="#cdd6f4" font-weight="normal" xml:space="preserve">    32.5  ####################  api-designer</text>
+  <text x="16" y="851" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Lexical:       190.4</text>
+  <text x="16" y="869" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Semantic:      0.570</text>
+  <text x="16" y="887" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Fused (base):  32.5</text>
+  <text x="16" y="905" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Prerequisites: OK</text>
+  <text x="16" y="923" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Auto-invoke:   allowed</text>
+  <text x="16" y="941" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           --------------------------------</text>
+  <text x="16" y="959" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Final:         32.5</text>
+  <text x="16" y="977" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Matched terms: design, designer, rest, api</text>
+  <text x="16" y="995" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Source:        frontmatter</text>
+  <text x="16" y="1013" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Model:         qwen3:7b (local, ollama)</text>
+  <text x="16" y="1031" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Model reason:  cheapest in tier=local</text>
+  <text x="16" y="1049" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           Est. cost:     $0 (offline)</text>
+  <text x="16" y="1067" fill="#cdd6f4" font-weight="normal" xml:space="preserve"></text>
+  <text x="16" y="1085" fill="#cdd6f4" font-weight="normal" xml:space="preserve">    32.5  ####################  api-design-reviewer</text>
+  <text x="16" y="1121" fill="#a6e3a1" font-weight="bold" xml:space="preserve">$ router search &quot;fix code with sk-abcdefghijklmnopqrstuvwx&quot; --no-semantic</text>
+  <text x="16" y="1139" fill="#cdd6f4" font-weight="normal" xml:space="preserve">Query: fix code with sk-abcdefghijklmnopqrstuvwx</text>
+  <text x="16" y="1157" fill="#cdd6f4" font-weight="normal" xml:space="preserve">After stopword filter: &quot;fix code [REDACTED:OPENAI_API_KEY]&quot;</text>
+  <text x="16" y="1175" fill="#cdd6f4" font-weight="normal" xml:space="preserve">Total skills: 141 | mode: lexical</text>
+  <text x="16" y="1193" fill="#cdd6f4" font-weight="normal" xml:space="preserve"></text>
+  <text x="16" y="1211" fill="#cdd6f4" font-weight="normal" xml:space="preserve">    35.5  ####################  api-designer</text>
+  <text x="16" y="1229" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           lexical match</text>
+  <text x="16" y="1247" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           tier: standard | complexity: medium | ~5000 tokens</text>
+  <text x="16" y="1265" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           model: qwen3:7b ($0)</text>
+  <text x="16" y="1283" fill="#cdd6f4" font-weight="normal" xml:space="preserve"></text>
+  <text x="16" y="1301" fill="#cdd6f4" font-weight="normal" xml:space="preserve">    30.7  #################  focused-fix</text>
+  <text x="16" y="1319" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           lexical match</text>
+  <text x="16" y="1337" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           tier: standard | complexity: medium | ~5000 tokens</text>
+  <text x="16" y="1355" fill="#cdd6f4" font-weight="normal" xml:space="preserve">           model: qwen3:7b ($0)</text>
+</svg>
