@@ -1,0 +1,16 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.github
+.vscode
+.idea
+*.md
+!README.md
+!CONTRIBUTING.md
+coverage
+.env
+.env.*
+scripts/fix-*.mjs
+scripts/phase*.mjs
+C:\\Temp

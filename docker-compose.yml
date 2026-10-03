@@ -1,0 +1,29 @@
+version: "3.9"
+
+services:
+  router:
+    build: .
+    image: next-skill-router:local
+    container_name: next-skill-router
+    environment:
+      - NODE_ENV=production
+      - OLLAMA_HOST=http://ollama:11434
+    volumes:
+      - "${HOME}/.claude:/root/.claude"
+    depends_on:
+      ollama:
+        condition: service_started
+    stdin_open: true
+    tty: true
+    command: ["--help"]
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: next-skill-router-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+volumes:
+  ollama_data:
